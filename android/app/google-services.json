@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "109180723972",
+    "project_id": "airmassxpress-0001",
+    "storage_bucket": "airmassxpress-0001.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109180723972:android:637c6d475177f3ab3b2651",
+        "android_client_info": {
+          "package_name": "com.airmassxpress.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "109180723972-82embnolehbsjv59q7hjfj1sq120qoo3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.airmassxpress.com",
+            "certificate_hash": "f70424ab5f77f15dfd432dcd1639c3bb030d4d6a"
+          }
+        },
+        {
+          "client_id": "109180723972-rt2qtc2a4aq9vi2se2cn6llj0ii0ajqh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClpf5j6DGZd8s59pA9_sytw930GWDmMB0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "109180723972-rt2qtc2a4aq9vi2se2cn6llj0ii0ajqh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "109180723972-do0cr7ciniud9o93md67u47kh9hk9lf1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.airmassxpress.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

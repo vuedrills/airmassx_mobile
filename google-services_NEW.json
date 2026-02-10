@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "109180723972",
+    "project_id": "airmassxpress-0001",
+    "storage_bucket": "airmassxpress-0001.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109180723972:android:637c6d475177f3ab3b2651",
+        "android_client_info": {
+          "package_name": "com.airmassxpress.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClpf5j6DGZd8s59pA9_sytw930GWDmMB0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
