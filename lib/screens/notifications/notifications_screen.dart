@@ -176,6 +176,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 height: 1.5,
               ),
             ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => context.push('/create-task'),
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text('Post a Task'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.navy,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ],
         ),
       );

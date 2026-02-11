@@ -70,16 +70,28 @@ class NotificationService {
     });
 
     // 6. Initial token update
-    String? token = await _fcm.getToken();
-    if (token != null) {
-      await _updateTokenOnBackend(token);
+    try {
+      String? token = await _fcm.getToken();
+      if (token != null) {
+        await _updateTokenOnBackend(token);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('NotificationService: Failed to get initial FCM token: $e');
+      }
     }
   }
 
   Future<void> updateToken() async {
-    String? token = await _fcm.getToken();
-    if (token != null) {
-      await _updateTokenOnBackend(token);
+    try {
+      String? token = await _fcm.getToken();
+      if (token != null) {
+        await _updateTokenOnBackend(token);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('NotificationService: Failed to get FCM token: $e');
+      }
     }
   }
 

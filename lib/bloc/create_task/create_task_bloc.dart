@@ -49,6 +49,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
     on<CreateTaskSiteVisitDateChanged>(_onSiteVisitDateChanged);
     on<CreateTaskSiteVisitTimeChanged>(_onSiteVisitTimeChanged);
     on<CreateTaskSiteVisitLocationChanged>(_onSiteVisitLocationChanged);
+    on<CreateTaskInitialize>(_onInitialize);
   }
 
   void _onTitleChanged(
@@ -406,25 +407,37 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
         }
       }
 
-      // Call API to create task
-      final taskId = await _apiService.createTask(taskData);
+      // Update or Create task
+      String taskId;
+      if (state.taskId != null) {
+        // Update existing task
+        await _apiService.updateTask(state.taskId!, taskData);
+        taskId = state.taskId!;
+      } else {
+        // Create new task
+        taskId = await _apiService.createTask(taskData);
+      }
       
       if (taskId.isNotEmpty) {
-        // Upload photos if any
-        if (state.photos.isNotEmpty) {
+        // Upload photos if any (only new ones if editing? current implementation re-uploads all if paths are local)
+        // For editing, we might need to handle existing URLs vs new local paths.
+        // Assuming _apiService handles mixed lists or we filter.
+        // However, state.photos might contain URLs now.
+        final localPhotos = state.photos.where((p) => !p.startsWith('http')).toList();
+        
+        if (localPhotos.isNotEmpty) {
           try {
-            await _apiService.uploadTaskImages(taskId, state.photos);
+            await _apiService.uploadTaskImages(taskId, localPhotos);
           } catch (e) {
             debugPrint('Error uploading task images: $e');
-            // We still consider task creation a success even if image upload fails,
-            // but we could handle this better by showing a warning.
           }
         }
 
-        // Upload attachments if any
-        if (state.attachments.isNotEmpty) {
+        // Upload attachments
+        final localAttachments = state.attachments.where((p) => !p.startsWith('http')).toList();
+        if (localAttachments.isNotEmpty) {
           try {
-            await _apiService.uploadTaskAttachments(taskId, state.attachments);
+            await _apiService.uploadTaskAttachments(taskId, localAttachments);
           } catch (e) {
             debugPrint('Error uploading task attachments: $e');
           }
@@ -432,16 +445,17 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
 
         // Upload project specific files
         if (state.taskType == 'project') {
-          if (state.boqPath != null) {
+          if (state.boqPath != null && !state.boqPath!.startsWith('http')) {
             try {
               await _apiService.uploadProjectBOQ(taskId, state.boqPath!);
             } catch (e) {
               debugPrint('Error uploading project BOQ: $e');
             }
           }
-          if (state.plansPaths.isNotEmpty) {
+          final localPlans = state.plansPaths.where((p) => !p.startsWith('http')).toList();
+          if (localPlans.isNotEmpty) {
             try {
-              await _apiService.uploadProjectPlans(taskId, state.plansPaths);
+              await _apiService.uploadProjectPlans(taskId, localPlans);
             } catch (e) {
               debugPrint('Error uploading project plans: $e');
             }
@@ -452,13 +466,13 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
       } else {
         emit(state.copyWith(
           status: CreateTaskStatus.failure,
-          errorMessage: 'Failed to create task - no ID returned',
+          errorMessage: 'Failed to save task',
         ));
       }
     } catch (e) {
       emit(state.copyWith(
         status: CreateTaskStatus.failure,
-        errorMessage: 'Failed to create task: ${e.toString()}',
+        errorMessage: 'Failed to save task: ${e.toString()}',
       ));
     }
   }
@@ -556,6 +570,48 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
       siteVisitAddress: event.location,
       siteVisitLat: event.latitude,
       siteVisitLng: event.longitude,
+    ));
+  }
+
+  void _onInitialize(
+    CreateTaskInitialize event,
+    Emitter<CreateTaskState> emit,
+  ) {
+    final task = event.task; // Assumed to be Task model
+    
+    // Determine date type
+    String? dateType = 'flexible';
+    if (task.date != null) {
+      dateType = 'on_date';
+    } else if (task.timelineEnd != null) {
+      dateType = 'before_date';
+    }
+
+    emit(state.copyWith(
+      taskId: task.id, // Set taskId for updates
+      title: task.title,
+      description: task.description,
+      categories: [task.category], // Assuming single category for now or parse if comma separated
+      budget: task.budget,
+      location: task.locationAddress,
+      latitude: task.locationCoordinates?.latitude,
+      longitude: task.locationCoordinates?.longitude,
+      city: task.city,
+      suburb: task.suburb,
+      photos: task.photos,
+      date: task.date,
+      dateType: dateType,
+      taskType: task.taskType,
+      isFlexible: task.date == null,
+      // Equipment fields
+      equipmentUnits: task.equipmentUnits,
+      numberOfTrips: task.numberOfTrips,
+      distancePerTrip: task.distancePerTrip,
+      // Project fields
+      requiresSiteVisit: task.requiresSiteVisit ?? false,
+      siteReadiness: task.siteReadiness,
+      projectSize: task.projectSize,
+      timelineEnd: task.timelineEnd,
     ));
   }
 }

@@ -219,16 +219,18 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    review.comment,
-                    style: const TextStyle(
-                      height: 1.4,
-                      fontSize: 15,
-                      color: AppTheme.navy,
+                  if (review.comment.isNotEmpty) ...[
+                    Text(
+                      review.comment,
+                      style: const TextStyle(
+                        height: 1.4,
+                        fontSize: 15,
+                        color: AppTheme.navy,
+                      ),
                     ),
-                  ),
-                  if (review.taskTitle != null) ...[
-                    const SizedBox(height: 8),
+                    if (review.taskTitle != null) const SizedBox(height: 8),
+                  ],
+                  if (review.taskTitle != null)
                     Text(
                       'Task: ${review.taskTitle}',
                       style: TextStyle(
@@ -237,7 +239,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                         fontStyle: FontStyle.italic,
                       ),
                     ),
-                  ],
                 ],
               ),
             ),

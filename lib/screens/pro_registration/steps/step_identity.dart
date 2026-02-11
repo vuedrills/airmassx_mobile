@@ -353,7 +353,7 @@ class _StepIdentityState extends State<StepIdentity> with TickerProviderStateMix
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed to upload: ${e.toString()}')),
         );
       }
     } finally {

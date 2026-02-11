@@ -20,24 +20,28 @@ import '../../services/ad_service.dart';
 import '../../bloc/category/category_state.dart';
 import '../../bloc/category/category_event.dart';
 
+import '../../models/task.dart';
+
 class CreateTaskScreen extends StatelessWidget {
   final String? initialTitle;
+  final Task? task; // Add task parameter
   
-  const CreateTaskScreen({super.key, this.initialTitle});
+  const CreateTaskScreen({super.key, this.initialTitle, this.task});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => getIt<CreateTaskBloc>(),
-      child: _CreateTaskContent(initialTitle: initialTitle),
+      child: _CreateTaskContent(initialTitle: initialTitle, task: task),
     );
   }
 }
 
 class _CreateTaskContent extends StatefulWidget {
   final String? initialTitle;
+  final Task? task;
   
-  const _CreateTaskContent({this.initialTitle});
+  const _CreateTaskContent({this.initialTitle, this.task});
 
   @override
   State<_CreateTaskContent> createState() => _CreateTaskContentState();
@@ -54,7 +58,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     _currentStep = 0; // Always start with category selection
     _pageController = PageController(initialPage: _currentStep);
     
-    if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+    if (widget.task != null) {
+      context.read<CreateTaskBloc>().add(CreateTaskInitialize(widget.task));
+    } else if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
       // Pre-fill title if provided from another screen
       context.read<CreateTaskBloc>().add(CreateTaskTitleChanged(widget.initialTitle!));
     }
@@ -1774,7 +1780,7 @@ class _StepReview extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Post the task', style: TextStyle(fontSize: 16)),
+                      : Text(state.isEditing ? 'Update Task' : 'Post the task', style: const TextStyle(fontSize: 16)),
                 ),
               ),
             ],
@@ -1833,11 +1839,15 @@ class _ReviewRow extends StatelessWidget {
 }
 
 // --- Success Step ---
+// --- Step 8: Success ---
 class _StepSuccess extends StatelessWidget {
   const _StepSuccess();
 
   @override
   Widget build(BuildContext context) {
+    final state = context.read<CreateTaskBloc>().state;
+    final isEditing = state.isEditing;
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -1856,7 +1866,7 @@ class _StepSuccess extends StatelessWidget {
           children: [
             const Spacer(),
             Text(
-              'Task Posted!',
+              isEditing ? 'Task Updated!' : 'Task Posted!',
               style: GoogleFonts.oswald(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -1865,7 +1875,9 @@ class _StepSuccess extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your task is posted. Here\'s what\'s next:',
+              isEditing 
+                  ? 'Your task has been successfully updated.' 
+                  : 'Your task is posted. Here\'s what\'s next:',
               style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                 color: AppTheme.navy.withOpacity(0.7),
                 fontWeight: FontWeight.w500,
@@ -1873,20 +1885,22 @@ class _StepSuccess extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
-            const _NextStepItem(
-              number: 1,
-              text: 'Taskers will make offers',
-            ),
-            const SizedBox(height: 24),
-            const _NextStepItem(
-              number: 2,
-              text: 'Accept an offer',
-            ),
-            const SizedBox(height: 24),
-            const _NextStepItem(
-              number: 3,
-              text: 'Chat and get it done!',
-            ),
+            if (!isEditing) ...[
+              const _NextStepItem(
+                number: 1,
+                text: 'Taskers will make offers',
+              ),
+              const SizedBox(height: 24),
+              const _NextStepItem(
+                number: 2,
+                text: 'Accept an offer',
+              ),
+              const SizedBox(height: 24),
+              const _NextStepItem(
+                number: 3,
+                text: 'Chat and get it done!',
+              ),
+            ],
             const Spacer(),
             SizedBox(
               width: double.infinity,
@@ -1900,7 +1914,7 @@ class _StepSuccess extends StatelessWidget {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Go to my task', style: TextStyle(fontSize: 16)),
+                child: const Text('Go to my tasks', style: TextStyle(fontSize: 16)),
               ),
             ),
             const SizedBox(height: 24),

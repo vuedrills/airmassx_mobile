@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -34,6 +35,7 @@ import '../tasks/post_review_screen.dart';
 import '../messaging/chat_screen.dart';
 import '../../services/realtime_service.dart';
 import '../../widgets/ads/banner_ad_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
@@ -49,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   late SearchBloc _searchBloc;
   late FilterBloc _filterBloc;
   late TabController _tabController;
+  late ScrollController _scrollController;
   StreamSubscription? _taskCreatedSubscription;
   int _currentAdIndex = 0;
 
@@ -62,11 +65,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     _searchBloc = getIt<SearchBloc>();
     _filterBloc = getIt<FilterBloc>();
     _tabController = TabController(length: 4, vsync: this);
+    _scrollController = ScrollController();
     
     _tabController.addListener(_onTabChanged);
+    _scrollController.addListener(_onScroll);
 
-    // Initial load
-    _fetchTasksForCurrentTab();
+    // Initial load from preferences
+    _loadStateFromPrefs();
     
     // Original Home logic for active tasks and reviews
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -76,6 +81,42 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     
     // Subscribe to real-time task creation events
     _setupRealtimeSubscription();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+      _browseBloc.add(LoadMoreTasks());
+    }
+  }
+
+  Future<void> _loadStateFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedTab = prefs.getInt('home_tab_index') ?? 0;
+    final savedCategory = prefs.getString('home_selected_category_id');
+
+    if (mounted) {
+      if (savedTab >= 0 && savedTab < _tabController.length) {
+        _tabController.index = savedTab;
+        _lastFetchedIndex = savedTab;
+      }
+      
+      // Perform initial fetch
+      _fetchTasksForCurrentTab(initialCategoryId: savedCategory);
+    }
+  }
+
+  Future<void> _saveTabToPrefs(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('home_tab_index', index);
+  }
+
+  Future<void> _saveCategoryToPrefs(String? categoryId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (categoryId != null) {
+      await prefs.setString('home_selected_category_id', categoryId);
+    } else {
+      await prefs.remove('home_selected_category_id');
+    }
   }
   
   void _setupRealtimeSubscription() {
@@ -91,27 +132,74 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     });
   }
 
+  int _lastFetchedIndex = -1;
+
   void _onTabChanged() {
     if (!_tabController.indexIsChanging) {
-      _fetchTasksForCurrentTab();
+      _saveTabToPrefs(_tabController.index);
+    }
+
+    // Only fetch if index changed or current list is empty
+    bool isEmpty = false;
+    final state = _browseBloc.state;
+    if (state is BrowseLoaded && state.tasks.isEmpty) {
+      isEmpty = true;
+    }
+
+    if (_tabController.index == _lastFetchedIndex && !isEmpty) return;
+    
+    _lastFetchedIndex = _tabController.index;
+    _fetchTasksForCurrentTab();
+  }
+
+  void _fetchTasksForCurrentTab({String? initialCategoryId}) {
+    String? taskType;
+    String? tier;
+
+    switch (_tabController.index) {
+      case 0: // Trades
+        taskType = 'service';
+        tier = 'artisanal';
+        break;
+      case 1: // Professional
+        taskType = 'service';
+        tier = 'professional';
+        break;
+      case 2: // Equipment
+        taskType = 'equipment';
+        tier = 'equipment';
+        break;
+      case 3: // Contractors
+        taskType = 'project';
+        tier = 'project';
+        break;
+    }
+
+    if (taskType != null) {
+      _browseBloc.add(LoadBrowseTasksWithFilter(
+        taskType: taskType, 
+        tier: tier,
+      ));
+      
+      // If we have a saved category, apply it after the categories are loaded
+      if (initialCategoryId != null && initialCategoryId != 'all') {
+        // We need to wait for BrowseLoaded state to have the categories
+        // or just fire it and let BrowseBloc handle it if possible.
+        // Actually SelectCategory requires BrowseLoaded.
+        // So we'll fire it after a small delay or better, listen to the state.
+        _applyInitialCategory(initialCategoryId);
+      }
     }
   }
 
-  void _fetchTasksForCurrentTab() {
-    switch (_tabController.index) {
-      case 0: // Artisanal
-        _browseBloc.add(const LoadBrowseTasksWithFilter(taskType: 'service', tier: 'artisanal'));
-        break;
-      case 1: // Professional
-        _browseBloc.add(const LoadBrowseTasksWithFilter(taskType: 'service', tier: 'professional'));
-        break;
-      case 2: // Equipment
-        _browseBloc.add(const LoadBrowseTasksWithFilter(taskType: 'equipment', tier: 'equipment'));
-        break;
-      case 3: // Projects
-        _browseBloc.add(const LoadBrowseTasksWithFilter(taskType: 'project', tier: 'project'));
-        break;
-    }
+  void _applyInitialCategory(String categoryId) {
+    StreamSubscription? sub;
+    sub = _browseBloc.stream.listen((state) {
+      if (state is BrowseLoaded) {
+        _browseBloc.add(SelectCategory(categoryId));
+        sub?.cancel();
+      }
+    });
   }
 
   @override
@@ -125,7 +213,156 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     _searchBloc.close();
     _filterBloc.close();
     _tabController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  Widget _buildHomeContent(BuildContext context) {
+    return BlocListener<BrowseBloc, BrowseState>(
+      listener: (context, state) {
+        if (state is BrowseLoaded) {
+          _saveCategoryToPrefs(state.selectedCategoryId);
+        }
+      },
+      child: RefreshIndicator(
+        onRefresh: () async {
+          final state = _browseBloc.state;
+          String? currentCat;
+          if (state is BrowseLoaded) {
+            currentCat = state.selectedCategoryId;
+          }
+          
+          _fetchTasksForCurrentTab(initialCategoryId: currentCat);
+          context.read<TaskBloc>().add(const TaskLoadActive());
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        color: AppTheme.navy,
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            // Row 1 & 2: Search and Tabs (Sticky)
+            _buildStickyHeader(context),
+
+            // Active Task Ribbon
+            BlocBuilder<TaskBloc, TaskState>(
+              builder: (context, state) {
+                if (state.activeTasks.isNotEmpty) {
+                  return SliverToBoxAdapter(
+                    child: _buildActiveTaskRibbon(state.activeTasks.first)
+                        .animate()
+                        .fadeIn()
+                        .slideY(begin: -0.5, end: 0, duration: 500.ms, curve: Curves.easeOutCirc),
+                  );
+                }
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              },
+            ),
+
+            // Row 3: Category Chips
+            SliverToBoxAdapter(
+              child: const Padding(
+                padding: EdgeInsets.only(top: 12.0, bottom: 4.0),
+                child: CategoryChips(),
+              ),
+            ),
+
+            // Feature Carousel (Always shown when loaded)
+            BlocBuilder<BrowseBloc, BrowseState>(
+              buildWhen: (previous, current) => current is BrowseLoaded || current is BrowseLoading,
+              builder: (context, state) {
+                if (state is BrowseLoaded) {
+                  return SliverToBoxAdapter(
+                    child: FeatureCarousel(ads: state.ads)
+                        .animate()
+                        .fadeIn(delay: 300.ms)
+                        .scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1), curve: Curves.easeOutBack),
+                  );
+                }
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              },
+            ),
+
+            // Task List / Empty State
+            BlocBuilder<BrowseBloc, BrowseState>(
+              builder: (context, state) {
+                if (state is BrowseLoading) {
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildLoadingCard().animate().fadeIn(delay: 200.ms),
+                        childCount: 3,
+                      ),
+                    ),
+                  );
+                }
+
+                if (state is BrowseLoaded) {
+                  if (state.tasks.isEmpty) {
+                    return SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(),
+                    );
+                  }
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final int taskCount = state.tasks.length;
+                          final bool hasAds = state.ads.isNotEmpty;
+                          final int adPosition = 3; // Inline ad after 3 tasks
+
+                          if (hasAds && index == adPosition && taskCount >= adPosition) {
+                            return _buildAdCarousel(state.ads);
+                          }
+
+                          // Calculate task index
+                          final int taskIndex = (hasAds && index > adPosition) ? index - 1 : index;
+
+                          if (taskIndex < taskCount) {
+                            return TaskCard(task: state.tasks[taskIndex])
+                                .animate(delay: (100 * (index % 5)).ms)
+                                .fadeIn(duration: 400.ms)
+                                .slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuad);
+                          }
+                          return null;
+                        },
+                        childCount: state.tasks.length + (state.ads.isNotEmpty && state.tasks.length >= 3 ? 1 : 0),
+                      ),
+                    ),
+                  );
+                }
+
+                if (state is BrowseError) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48, color: Colors.red)
+                              .animate()
+                              .shake(duration: 500.ms),
+                          const SizedBox(height: 16),
+                          Text(state.message),
+                        ],
+                      ).animate().fadeIn(),
+                    ),
+                  );
+                }
+
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              },
+            ),
+            
+            // Bottom padding for FAB
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -139,132 +376,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       ],
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAFB),
-        body: RefreshIndicator(
-          onRefresh: () async {
-            _fetchTasksForCurrentTab();
-            context.read<TaskBloc>().add(const TaskLoadActive());
-            await Future.delayed(const Duration(milliseconds: 500));
-          },
-          color: AppTheme.navy,
-          child: CustomScrollView(
-            slivers: [
-              // Row 1 & 2: Search and Tabs (Sticky)
-              _buildStickyHeader(context),
-
-              // Active Task Ribbon
-              BlocBuilder<TaskBloc, TaskState>(
-                builder: (context, state) {
-                  if (state.activeTasks.isNotEmpty) {
-                    return SliverToBoxAdapter(
-                      child: _buildActiveTaskRibbon(state.activeTasks.first),
-                    );
-                  }
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                },
-              ),
-
-              // Row 3: Category Chips
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 12.0, bottom: 4.0),
-                  child: CategoryChips(),
-                ),
-              ),
-
-              // Task List
-              BlocBuilder<BrowseBloc, BrowseState>(
-                builder: (context, state) {
-                  if (state is BrowseLoading) {
-                    return SliverPadding(
-                      padding: const EdgeInsets.all(16.0),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => _buildLoadingCard(),
-                          childCount: 3,
-                        ),
-                      ),
-                    );
-                  }
-
-                  if (state is BrowseLoaded) {
-                    if (state.tasks.isEmpty) {
-                      return SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _buildEmptyState(),
-                      );
-                    }
-
-                    return SliverPadding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            // Item 0 is always the Feature Carousel
-                            if (index == 0) {
-                              return FeatureCarousel(ads: state.ads);
-                            }
-
-                            // Calculate index relative to content (skipping Feature Carousel)
-                            final int contentIndex = index - 1;
-                            
-                            final bool hasAds = state.ads.isNotEmpty;
-                            final int adPosition = 4; // After 4 tasks
-
-                            if (hasAds) {
-                              // Ad should appear at adPosition or at end of list if shorter
-                              final int effectiveAdIndex = state.tasks.length < adPosition 
-                                  ? state.tasks.length 
-                                  : adPosition;
-
-                              if (contentIndex == effectiveAdIndex) {
-                                return _buildAdCarousel(state.ads);
-                              }
-                              
-                              // Map to task list
-                              final int taskIndex = contentIndex > effectiveAdIndex 
-                                  ? contentIndex - 1 
-                                  : contentIndex;
-
-                              if (taskIndex < state.tasks.length) {
-                                return TaskCard(task: state.tasks[taskIndex]);
-                              }
-                            } else {
-                              // No ads, simple mapping
-                              if (contentIndex < state.tasks.length) {
-                                return TaskCard(task: state.tasks[contentIndex]);
-                              }
-                            }
-                            return null;
-                          },
-                          childCount: state.tasks.length + 1 + (state.ads.isNotEmpty ? 1 : 0),
-                        ),
-                      ),
-                    );
-                  }
-
-                  if (state is BrowseError) {
-                    return SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(child: Text(state.message)),
-                    );
-                  }
-
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                },
-              ),
-              
-              // Bottom padding for FAB
-              const SliverToBoxAdapter(child: SizedBox(height: 80)),
-            ],
-          ),
-        ),
+        body: _buildHomeContent(context),
         floatingActionButton: FloatingActionButton(
           heroTag: 'home_post_task_fab',
           onPressed: () => _showCreateOptions(context),
           backgroundColor: AppTheme.primary,
           elevation: 6,
           child: const Icon(Icons.add, color: Colors.white, size: 28),
-        ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+         .scale(begin: const Offset(1, 1), end: const Offset(1.08, 1.08), duration: 1500.ms, curve: Curves.easeInOut),
         bottomNavigationBar: const BannerAdWidget(),
       ),
     );
@@ -551,17 +671,33 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () => _showCreateOptions(context),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text('Post a Task'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              elevation: 2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
             onPressed: () {
-              _browseBloc.add(const LoadBrowseTasksWithFilter(taskType: 'service'));
+              final state = _browseBloc.state;
+              String? currentCategoryId;
+              if (state is BrowseLoaded) {
+                currentCategoryId = state.selectedCategoryId;
+              }
+              _fetchTasksForCurrentTab(initialCategoryId: currentCategoryId);
             },
             icon: const Icon(Icons.refresh),
             label: const Text('Refresh'),
-            style: OutlinedButton.styleFrom(
+            style: TextButton.styleFrom(
               foregroundColor: AppTheme.navy,
-              side: const BorderSide(color: AppTheme.navy),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             ),
           ),
         ],

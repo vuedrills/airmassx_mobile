@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/error_handler.dart';
 import '../../services/api_service.dart';
 import 'search_event.dart';
 import 'search_state.dart';
@@ -38,7 +39,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       
       emit(SearchLoaded(tasks: filteredTasks, query: event.query));
     } catch (e) {
-      emit(SearchError(e.toString()));
+      emit(SearchError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -50,7 +51,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final history = await _apiService.getSearchHistory();
       emit(SearchHistoryLoaded(history));
     } catch (e) {
-      emit(SearchError(e.toString()));
+      emit(SearchError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -62,7 +63,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       await _apiService.clearSearchHistory();
       emit(const SearchHistoryLoaded([]));
     } catch (e) {
-      emit(SearchError(e.toString()));
+      emit(SearchError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -73,7 +74,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       await _apiService.addSearchHistory(event.query);
     } catch (e) {
-      emit(SearchError(e.toString()));
+      emit(SearchError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -85,7 +86,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final suggestions = await _apiService.getSearchSuggestions(event.query);
       emit(SearchSuggestionsLoaded(suggestions: suggestions, query: event.query));
     } catch (e) {
-      emit(SearchError(e.toString()));
+      emit(SearchError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }

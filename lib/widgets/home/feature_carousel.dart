@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../config/theme.dart';
 import '../../screens/tasks/create_task_screen.dart';
 import '../../models/ad.dart';
@@ -182,32 +183,32 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Icon Box or Ad Image
-                    if (itemIsAd && feature.imageUrl.isNotEmpty)
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          image: DecorationImage(
-                            image: NetworkImage(feature.imageUrl),
-                            fit: BoxFit.cover,
+                    (itemIsAd && feature.imageUrl.isNotEmpty
+                      ? Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: NetworkImage(feature.imageUrl),
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ),
-                      )
-                    else
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          icon,
-                          color: Colors.white,
-                          size: 26,
-                        ),
-                      ),
+                        )
+                      : Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        )
+                    ).animate().scale(delay: 400.ms, duration: 400.ms, curve: Curves.easeOutBack),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -224,7 +225,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ),
+                          ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.1, end: 0),
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
@@ -235,7 +236,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                          ),
+                          ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1, end: 0),
                           const SizedBox(height: 8),
                           SizedBox(
                             height: 28,
@@ -258,7 +259,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                                 ),
                               ),
                             ),
-                          ),
+                          ).animate().fadeIn(delay: 700.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
                         ],
                       ),
                     ),

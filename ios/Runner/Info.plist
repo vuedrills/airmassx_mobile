@@ -76,5 +76,10 @@
     <string>e29fe860a25ecbc30f24b24670e8429b</string>
     <key>FacebookDisplayName</key>
     <string>Airmass Xpress</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>

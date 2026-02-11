@@ -90,25 +90,24 @@ class _PostProjectContentState extends State<_PostProjectContent> {
         if (state.status == CreateTaskStatus.success) {
           Navigator.pop(context, true);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
+            const SnackBar(
+              content: Row(
                 children: [
                   Icon(Icons.check_circle, color: Colors.white),
                   SizedBox(width: 12),
                   Text('Project request posted successfully!'),
                 ],
               ),
-              backgroundColor: Colors.green.shade600,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              // Removed explicit background color
             ),
           );
         } else if (state.status == CreateTaskStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage ?? 'Failed to post project'),
-              backgroundColor: Colors.red.shade600,
               behavior: SnackBarBehavior.floating,
+              // Removed explicit background color
             ),
           );
         }

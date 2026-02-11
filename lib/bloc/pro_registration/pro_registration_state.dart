@@ -107,7 +107,12 @@ class ProRegistrationState extends Equatable {
   bool get isStep3Valid => professionIds.isNotEmpty;
   bool get isStep4Valid => true; // Portfolio is optional
   bool get isStep5Valid => true; // Qualifications are optional
-  bool get isStep6Valid => primaryCity.isNotEmpty; // Location is required
+  bool get isStep6Valid => 
+      primaryCity.isNotEmpty && 
+      primaryLatitude != null && 
+      primaryLongitude != null &&
+      primaryLatitude != 0 &&
+      primaryLongitude != 0; // Location is required
   bool get isStep7Valid => true; // EcoCash is now optional for submission
 
   // Can submit as long as core requirements are met

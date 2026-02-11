@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'location_disclaimer_dialog.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as google;
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
@@ -51,6 +53,7 @@ class EnhancedLocationPicker extends StatefulWidget {
   final double? initialLng;
   final String? initialCity;
   final String? hintText;
+  final double? height;
   final Function(EnhancedLocationResult) onLocationSelected;
 
   const EnhancedLocationPicker({
@@ -60,6 +63,7 @@ class EnhancedLocationPicker extends StatefulWidget {
     this.initialLng,
     this.initialCity,
     this.hintText,
+    this.height = 500,
     required this.onLocationSelected,
   });
 
@@ -120,6 +124,8 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
   String? _currentSessionToken;
   final _uuid = const Uuid();
   Timer? _reverseGeocodeTimer;
+  bool _initialLoad = true;
+  bool _manuallyMoved = false;
 
   @override
   void initState() {
@@ -148,6 +154,11 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
     final suburb = _isOtherSuburb ? _suburbController.text.trim() : _selectedSuburb;
 
     if (city == null || city.isEmpty || suburb == null || suburb.isEmpty || _pinPosition == null) {
+      return;
+    }
+    
+    // Check if we are in "Other" mode and the text field is empty
+    if (_isOtherSuburb && _suburbController.text.trim().isEmpty) {
       return;
     }
 
@@ -281,8 +292,8 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
         _isOtherSuburb = true;
         _suburbController.clear();
         _cityController.clear();
-        _notifyChanges();
       });
+      _notifyChanges();
       return;
     }
 
@@ -317,6 +328,7 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
         _isOtherSuburb = true;
         _selectedSuburb = null;
       });
+      _notifyChanges();
       return;
     }
     
@@ -368,8 +380,22 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
   }
 
   // --- Google Search Logic ---
-  void _onGoogleSearchChanged(String query) {
+   void _onGoogleSearchChanged(String query) {
      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+
+     // Invalidate current selection while user is typing
+     // This ensures they must select a suggestion or move the map to get valid coords
+     if (query.isNotEmpty) {
+       widget.onLocationSelected(EnhancedLocationResult(
+         city: '',
+         suburb: '',
+         addressDetails: '',
+         latitude: 0,
+         longitude: 0,
+         fullAddress: '',
+       ));
+     }
+
      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
         if (query.length > 2) {
            // Start a new session if we don't have one
@@ -380,7 +406,7 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
            setState(() => _showGoogleResults = false);
         }
      });
-  }
+   }
 
   Future<void> _performGoogleSearch(String query) async {
       try {
@@ -388,7 +414,8 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
           if (mounted) {
              setState(() {
                 _googleSearchResults = results;
-                _showGoogleResults = results.isNotEmpty;
+                // Always show results container if we have query > 2, so we can show "Use pin location"
+                _showGoogleResults = true;
              });
           }
       } catch (e) {
@@ -435,6 +462,23 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
   }
 
   Future<void> _useCurrentLocation() async {
+    // Check permission status
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+       // Show disclaimer dialog
+       final bool? accepted = await showDialog<bool>(
+         context: context, 
+         builder: (_) => const LocationDisclaimerDialog()
+       );
+       if (accepted != true) return; // User cancelled/denied
+       
+       // Request permission
+       permission = await Geolocator.requestPermission();
+       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+          return;
+       }
+    }
+
     setState(() => _isLocating = true);
     
     final position = await _geocodingService.getCurrentLocation();
@@ -443,9 +487,8 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
       if (mounted) {
         setState(() => _isLocating = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Could not get current location. Please enable GPS.'),
-            backgroundColor: Colors.red.shade600,
+          const SnackBar(
+            content: Text('Could not get current location. Please enable GPS.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -467,12 +510,41 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
         if (reverseResult != null) {
           // Logic to pre-fill form fields (Osm Form)
           if (reverseResult.city != null) {
-             // ... existing city match logic ...
-             // (Keeping it brief for the rewrite)
+             // Try to match city
+             final cityMatch = _cities.firstWhere(
+               (c) => (c['name'] as String).toLowerCase() == reverseResult.city!.toLowerCase(),
+               orElse: () => <String, dynamic>{},
+             );
+             
+             if (cityMatch.isNotEmpty) {
+               _selectedCity = cityMatch['name'];
+               _selectedCityId = cityMatch['id'];
+               _isOtherCity = false;
+               _loadSuburbs(_selectedCityId!); 
+             } else {
+               _isOtherCity = true;
+               _selectedCity = null;
+               _cityController.text = reverseResult.city!;
+             }
           } 
+          
           if (reverseResult.suburb != null) {
-             _suburbController.text = reverseResult.suburb!;
-             _selectedSuburb = reverseResult.suburb;
+             final String gpsSuburb = reverseResult.suburb!;
+             // Try to match in existing list if loaded
+             final match = _suburbs.firstWhere(
+               (s) => (s['name'] as String).toLowerCase() == gpsSuburb.toLowerCase(),
+               orElse: () => <String, dynamic>{},
+             );
+             
+             if (match.isNotEmpty) {
+                _selectedSuburb = match['name'];
+                _suburbController.text = _selectedSuburb!;
+                _isOtherSuburb = false;
+             } else {
+                _isOtherSuburb = true;
+                _selectedSuburb = null;
+                _suburbController.text = gpsSuburb;
+             }
           }
           
           // Pre-fill Google Form field
@@ -480,6 +552,7 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
         }
         
         _isLocating = false;
+        _notifyChanges(); // Trigger update
       });
       _moveMapTo(latLng);
     }
@@ -520,6 +593,10 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
 
   void _reverseGeocodeCurrentPosition() async {
       if (_pinPosition == null || _isReverseGeocoding) return;
+      
+      // Don't auto-fill if we haven't manually moved or if we're still in initial load
+      // This prevents the search bar from being filled with the default Harare address on start
+      if (!_manuallyMoved || _initialLoad) return;
       
       setState(() => _isReverseGeocoding = true);
       
@@ -566,7 +643,7 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
 
   @override
   Widget build(BuildContext context) {
-      return BlocBuilder<MapSettingsCubit, MapSettingsState>(
+      Widget picker = BlocBuilder<MapSettingsCubit, MapSettingsState>(
           builder: (context, state) {
               if (state.provider == MapProvider.google) {
                   return _buildGoogleInterface();
@@ -574,222 +651,300 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
               return _buildOsmForm();
           },
       );
+
+      if (widget.height != null) {
+          return SizedBox(height: widget.height, child: picker);
+      }
+      return picker;
   }
 
   // --- GOOGLE INTERFACE (UBER STYLE) ---
   Widget _buildGoogleInterface() {
-      return SizedBox(
-          height: 600, // Fixed height or expandable
-          child: Stack(
-              children: [
-                   // Full Screen Map
-                   DynamicMap(
-                    initialCenter: _pinPosition ?? LatLng(-17.8252, 31.0335),
-                    initialZoom: 15.0,
-                    osmController: _mapController, // Not used but required
-                    markers: [], // We use center pin, not markers on map
-                    onTap: (pos) {}, // Disable tap in favor of pan
-                    onGoogleMapCreated: (controller) {
-                        _googleMapController = controller;
-                        if (_pinPosition != null) {
-                             controller.moveCamera(google.CameraUpdate.newLatLng(
-                                 google.LatLng(_pinPosition!.latitude, _pinPosition!.longitude)
-                             ));
+      return Stack(
+          children: [
+               // Full Screen Map
+               DynamicMap(
+                initialCenter: _pinPosition ?? LatLng(-17.8252, 31.0335),
+                initialZoom: 15.0,
+                osmController: _mapController, // Not used but required
+                markers: [], // We use center pin, not markers on map
+                onTap: (pos) {}, // Disable tap in favor of pan
+                onGoogleMapCreated: (controller) {
+                    _googleMapController = controller;
+                    if (_pinPosition != null) {
+                         controller.moveCamera(google.CameraUpdate.newLatLng(
+                             google.LatLng(_pinPosition!.latitude, _pinPosition!.longitude)
+                         ));
+                    }
+                },
+                onCameraMove: (pos) {
+                    setState(() {
+                      _pinPosition = pos;
+                      _hasConfirmedPin = false; // Reset when user moves map
+                    });
+                    
+                    // Debounce reverse geocoding
+                    _reverseGeocodeTimer?.cancel();
+                    
+                    // Skip reverse geocode on initial load/map setup
+                    if (_initialLoad) {
+                        // After entry, we wait for the first real movement
+                        _initialLoad = false;
+                        return;
+                    }
+
+                    _reverseGeocodeTimer = Timer(const Duration(milliseconds: 1000), () {
+                        if (mounted) {
+                            setState(() => _manuallyMoved = true);
+                            _confirmGoogleLocation();
                         }
-                    },
-                    onCameraMove: (pos) {
-                        setState(() {
-                          _pinPosition = pos;
-                          _hasConfirmedPin = false; // Reset when user moves map
-                        });
-                        
-                        // Debounce reverse geocoding
-                        _reverseGeocodeTimer?.cancel();
-                        _reverseGeocodeTimer = Timer(const Duration(milliseconds: 1000), () {
-                            if (mounted) _confirmGoogleLocation();
-                        });
-                    },
+                    });
+                },
+               ),
+               
+               // Center Pin (Fixed)
+               Center(
+                   child: Padding(
+                       padding: const EdgeInsets.only(bottom: 50), // Adjust for pin tip
+                       child: Icon(Icons.location_pin, size: 50, color: AppTheme.primary),
                    ),
-                   
-                   // Center Pin (Fixed)
-                   Center(
-                       child: Padding(
-                           padding: const EdgeInsets.only(bottom: 50), // Adjust for pin tip
-                           child: Icon(Icons.location_pin, size: 50, color: AppTheme.primary),
-                       ),
-                   ),
-                   
-                   // Top Search Bar
-                   Positioned(
-                       top: 20,
-                       left: 16,
-                       right: 16,
+               ),
+               
+               // Top Search Bar
+               Positioned(
+                   top: 0,
+                   left: 0,
+                   right: 0,
+                   child: SafeArea(
+                     child: Padding(
+                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                        child: Column(
-                           children: [
+                       children: [
+                           Container(
+                               decoration: BoxDecoration(
+                                   color: Colors.white,
+                                   borderRadius: BorderRadius.circular(8),
+                                   boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 10)],
+                               ),
+                               child: TextField(
+                                   controller: _googleSearchController,
+                                   decoration: InputDecoration(
+                                       hintText: "Search location...",
+                                       prefixIcon: const Icon(Icons.search),
+                                       border: InputBorder.none,
+                                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                       suffixIcon: _isLocating 
+                                         ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2)))
+                                         : IconButton(icon: const Icon(Icons.my_location), onPressed: _useCurrentLocation)
+                                   ),
+                                   onChanged: _onGoogleSearchChanged,
+                               ),
+                           ),
+                           if (_showGoogleResults) 
                                Container(
+                                   margin: const EdgeInsets.only(top: 4),
                                    decoration: BoxDecoration(
                                        color: Colors.white,
                                        borderRadius: BorderRadius.circular(8),
-                                       boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                                       boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 10)],
                                    ),
-                                   child: TextField(
-                                       controller: _googleSearchController,
-                                       decoration: InputDecoration(
-                                           hintText: "Search location...",
-                                           prefixIcon: const Icon(Icons.search),
-                                           border: InputBorder.none,
-                                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                           suffixIcon: _isLocating 
-                                             ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2)))
-                                             : IconButton(icon: const Icon(Icons.my_location), onPressed: _useCurrentLocation)
-                                       ),
-                                       onChanged: _onGoogleSearchChanged,
+                                   child: Column(
+                                     mainAxisSize: MainAxisSize.min,
+                                     children: [
+                                       if (_googleSearchResults.isNotEmpty)
+                                         ListView.builder(
+                                             shrinkWrap: true,
+                                             padding: EdgeInsets.zero,
+                                             itemCount: _googleSearchResults.length,
+                                             itemBuilder: (context, index) {
+                                                 final place = _googleSearchResults[index];
+                                                 return ListTile(
+                                                     title: Text(place.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                     subtitle: Text(place.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                     leading: const Icon(Icons.place, size: 20),
+                                                     onTap: () => _selectGooglePlace(place),
+                                                 );
+                                             },
+                                         ),
+                                        // Add "Use pin location" option
+                                       if (_googleSearchController.text.isNotEmpty)
+                                          Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                               if (_googleSearchResults.isNotEmpty) const Divider(height: 1),
+                                               ListTile(
+                                                 title: const Text("Use location on map", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                                                 subtitle: Text("Use '${_googleSearchController.text}' at current pin position", maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                 leading: const Icon(Icons.location_on, color: AppTheme.primary, size: 20),
+                                                 onTap: () {
+                                                     setState(() {
+                                                       _showGoogleResults = false;
+                                                       _currentSessionToken = null;
+                                                     });
+                                                     
+                                                     if (_pinPosition != null) {
+                                                         // Explicitly set the result using typed text + pin coords
+                                                         widget.onLocationSelected(EnhancedLocationResult(
+                                                           city: '', // Backend caninfer
+                                                           suburb: '',
+                                                           addressDetails: '',
+                                                           latitude: _pinPosition!.latitude,
+                                                           longitude: _pinPosition!.longitude,
+                                                           fullAddress: _googleSearchController.text,
+                                                         ));
+                                                         
+                                                         setState(() => _hasConfirmedPin = true);
+                                                     }
+                                                 },
+                                               ),
+                                            ],
+                                          ),
+                                     ],
                                    ),
-                               ),
-                               if (_showGoogleResults) 
-                                   Container(
-                                       margin: const EdgeInsets.only(top: 4),
-                                       decoration: BoxDecoration(
-                                           color: Colors.white,
-                                           borderRadius: BorderRadius.circular(8),
-                                           boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
-                                       ),
-                                       child: ListView.builder(
-                                           shrinkWrap: true,
-                                           padding: EdgeInsets.zero,
-                                           itemCount: _googleSearchResults.length,
-                                           itemBuilder: (context, index) {
-                                               final place = _googleSearchResults[index];
-                                               return ListTile(
-                                                   title: Text(place.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                   subtitle: Text(place.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                   leading: const Icon(Icons.place, size: 20),
-                                                   onTap: () => _selectGooglePlace(place),
-                                               );
-                                           },
-                                       ),
-                                   )
-                           ],
-                       ),
+                               )
+                       ],
                    ),
-                   
-                   // Bottom Coordinates Display
-                    Positioned(
-                        bottom: 20,
-                        left: 16,
-                        right: 16,
-                        child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Coordinates Display
-                              if (_pinPosition != null)
-                                Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                        color: _hasConfirmedPin ? AppTheme.navy : Colors.black87,
-                                        borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (_isReverseGeocoding)
-                                          const SizedBox(
-                                            width: 14, height: 14,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                          )
-                                        else if (_hasConfirmedPin)
-                                          const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16)
-                                        else
-                                          const Icon(Icons.location_on, color: Colors.white, size: 14),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                            "${_pinPosition!.latitude.toStringAsFixed(5)}, ${_pinPosition!.longitude.toStringAsFixed(5)}",
-                                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                ),
-                            ],
-                        ),
-                    )
-              ],
-          )
+               ),
+             ),
+           ),
+               // Bottom Coordinates Display
+                Positioned(
+                    bottom: 20,
+                    left: 16,
+                    right: 16,
+                    child: SafeArea(
+                      bottom: true,
+                      top: false,
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Coordinates Display
+                            if (_pinPosition != null)
+                              Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                      color: _hasConfirmedPin ? AppTheme.navy : Colors.black87,
+                                      borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (_isReverseGeocoding)
+                                        const SizedBox(
+                                          width: 14, height: 14,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      else if (_hasConfirmedPin)
+                                        const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16)
+                                      else
+                                        const Icon(Icons.location_on, color: Colors.white, size: 14),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                          "${_pinPosition!.latitude.toStringAsFixed(5)}, ${_pinPosition!.longitude.toStringAsFixed(5)}",
+                                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                              ),
+                          ],
+                      ),
+                    ),
+                )
+          ],
       );
   }
 
+
   // --- ORIGINAL OSM FORM ---
   Widget _buildOsmForm() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // City Selection
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'City / Town',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.navy,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.neutral200),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: DropdownButtonHideUnderline(
-                        child: _isLoadingCities
-                          ? const SizedBox(height: 48, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
-                          : DropdownButton<String>(
-                              value: _isOtherCity ? 'Other' : _selectedCity,
-                              hint: Text('Select your city', style: TextStyle(color: AppTheme.neutral400)),
-                              isExpanded: true,
-                              icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.navy),
-                              items: [
-                                ..._cities.map((city) => DropdownMenuItem(
-                                  value: city['name'] as String,
-                                  child: Text(city['name'] as String),
-                                )),
-                                const DropdownMenuItem(
-                                  value: 'Other',
-                                  child: Text('Other (type below)', style: TextStyle(fontStyle: FontStyle.italic)),
-                                ),
-                              ],
-                              onChanged: _onCityChanged,
-                            ),
-                      ),
-                    ),
-                    if (_isOtherCity) ...[
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _cityController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter city name...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppTheme.neutral200),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24), // Added padding
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // City Selection
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'City / Town',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.navy,
                         ),
-                        onChanged: (val) => _notifyChanges(),
                       ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.neutral200),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: DropdownButtonHideUnderline(
+                          child: _isLoadingCities
+                            ? const SizedBox(height: 48, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+                            : DropdownButton<String>(
+                                value: _isOtherCity ? 'Other' : _selectedCity,
+                                hint: Text('Select your city', style: TextStyle(color: AppTheme.neutral400)),
+                                isExpanded: true,
+                                icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.navy),
+                                items: [
+                                  ..._cities.map((city) => DropdownMenuItem(
+                                    value: city['name'] as String,
+                                    child: Text(city['name'] as String),
+                                  )),
+                                  const DropdownMenuItem(
+                                    value: 'Other',
+                                    child: Text('Other (type below)', style: TextStyle(fontStyle: FontStyle.italic)),
+                                  ),
+                                ],
+                                onChanged: _onCityChanged,
+                              ),
+                        ),
+                      ),
+                      if (_isOtherCity) ...[
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _cityController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter city name...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppTheme.neutral200),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          ),
+                          onChanged: (val) => _notifyChanges(),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
                 if (_selectedCity != null || _isOtherCity) ...[
                   const SizedBox(width: 12),
-                  _buildGpsButton(),
+                  // GPS Button moved here to be inline with City
+                  InkWell(
+                    onTap: _isLocating ? null : _useCurrentLocation,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+                      ),
+                      child: _isLocating
+                          ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary))
+                          : Icon(Icons.my_location, color: AppTheme.primary, size: 24),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -924,11 +1079,20 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
               height: 250,
               width: double.infinity,
               decoration: BoxDecoration(
-                border: Border.symmetric(
-                  horizontal: BorderSide(color: AppTheme.neutral200),
-                ),
+                border: Border.all(color: AppTheme.neutral200),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                   BoxShadow(
+                     color: Colors.black.withOpacity(0.05),
+                     blurRadius: 10,
+                     spreadRadius: 0,
+                     offset: const Offset(0, 4), 
+                   ),
+                ],
               ),
-              child: Stack(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
                 children: [
                   DynamicMap(
                     initialCenter: _pinPosition ?? LatLng(
@@ -1005,6 +1169,7 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
                     ),
                 ],
               ),
+              ),
             ),
             
             const SizedBox(height: 20),
@@ -1037,11 +1202,10 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
               maxLines: 3,
             ),
             
-            const SizedBox(height: 20),
-            
-            const SizedBox(height: 20),
+            const SizedBox(height: 40), // Extra space at bottom
           ],
         ],
+      ),
       ),
     );
   }

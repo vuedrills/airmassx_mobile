@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -149,9 +151,11 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             if (state is AuthAuthenticated) {
               context.read<ProfileBloc>().add(LoadProfile());
               if (_wantsToEarn) {
-                context.go('/profile/pro-registration');
+                // Navigate to home first, then trigger pro registration flow
+                // This ensures the bottom nav stack is present if they go back
+                context.go('/home?tab=4&action=pro_registration');
               } else {
-                context.go('/home');
+                context.go('/home?tab=0');
               }
             } else if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -216,20 +220,49 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
-                    // Account Type Toggle
+
+                    // Account Type Toggle (Moved to Top Priority)
                     _buildAnimatedWidget(
                       index: 1,
                       child: _buildAccountTypeSelector(),
                     ),
                     
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
+
+                    // Social Auth
+                    _buildAnimatedWidget(
+                      index: 2,
+                      child: BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          return _buildSocialButton(
+                            context,
+                            label: 'Continue with Google',
+                            icon: Icons.g_mobiledata_outlined,
+                            color: AppTheme.textPrimary,
+                            isLoading: state is AuthLoading,
+                            onTap: () {
+                              context.read<AuthBloc>().add(AuthGoogleLogin());
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // OR Divider
+                    _buildAnimatedWidget(
+                      index: 3,
+                      child: _buildPremiumDivider(text: 'OR SIGN UP WITH EMAIL'),
+                    ),
+                    
+                    const SizedBox(height: 24),
                     
                     // Full Name
                     _buildAnimatedWidget(
-                      index: 2,
+                      index: 4,
                       child: _buildTextField(
                         controller: _nameController,
                         label: 'Full Name',
@@ -245,7 +278,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                     
                     // Email
                     _buildAnimatedWidget(
-                      index: 3,
+                      index: 5,
                       child: _buildTextField(
                         controller: _emailController,
                         label: 'Email Address',
@@ -261,7 +294,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                     
                     // Password
                     _buildAnimatedWidget(
-                      index: 4,
+                      index: 6,
                       child: _buildTextField(
                         controller: _passwordController,
                         label: 'Password',
@@ -284,7 +317,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                     
                     // Terms Checkbox
                     _buildAnimatedWidget(
-                      index: 5,
+                      index: 7,
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -319,40 +352,44 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _acceptedTerms = !_acceptedTerms;
-                                  });
-                                },
-                                child: RichText(
-                                  text: TextSpan(
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                      height: 1.4,
-                                    ),
-                                    children: [
-                                      const TextSpan(text: 'I accept the '),
-                                      TextSpan(
-                                        text: 'Terms & Conditions',
-                                        style: const TextStyle(
-                                          color: AppTheme.navy,
-                                          fontWeight: FontWeight.bold,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                      const TextSpan(text: ' and '),
-                                      TextSpan(
-                                        text: 'Privacy Policy',
-                                        style: const TextStyle(
-                                          color: AppTheme.navy,
-                                          fontWeight: FontWeight.bold,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                    ],
+                              child: RichText(
+                                text: TextSpan(
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                    height: 1.4,
                                   ),
+                                  children: [
+                                    TextSpan(
+                                      text: 'I accept the ',
+                                      recognizer: TapGestureRecognizer()..onTap = () {
+                                        setState(() {
+                                          _acceptedTerms = !_acceptedTerms;
+                                        });
+                                      },
+                                    ),
+                                    TextSpan(
+                                      text: 'Terms & Conditions',
+                                      style: const TextStyle(
+                                        color: AppTheme.navy,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () => _launchUrl('https://www.airmassxpress.com/terms'),
+                                    ),
+                                    const TextSpan(text: ' and '),
+                                    TextSpan(
+                                      text: 'Privacy Policy',
+                                      style: const TextStyle(
+                                        color: AppTheme.navy,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () => _launchUrl('https://www.airmassxpress.com/privacy_policy'),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -365,7 +402,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                     
                     // Register Button
                     _buildAnimatedWidget(
-                      index: 6,
+                      index: 8,
                       child: BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           return Container(
@@ -408,35 +445,6 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                                       ),
                                     ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // OR Divider
-                    _buildAnimatedWidget(
-                      index: 7,
-                      child: _buildPremiumDivider(),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Social Auth
-                    _buildAnimatedWidget(
-                      index: 8,
-                      child: BlocBuilder<AuthBloc, AuthState>(
-                        builder: (context, state) {
-                          return _buildSocialButton(
-                            context,
-                            label: 'Continue with Google',
-                            icon: Icons.g_mobiledata_outlined,
-                            color: AppTheme.textPrimary,
-                            isLoading: state is AuthLoading,
-                            onTap: () {
-                              context.read<AuthBloc>().add(AuthGoogleLogin());
-                            },
                           );
                         },
                       ),
@@ -485,6 +493,14 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         ),
       ),
     );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    if (!await canLaunchUrl(Uri.parse(url))) {
+      debugPrint('Could not launch $url');
+      return;
+    }
+    await launchUrl(Uri.parse(url));
   }
 
   Widget _buildAnimatedWidget({required int index, required Widget child}) {
@@ -658,7 +674,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildPremiumDivider() {
+  Widget _buildPremiumDivider({String text = 'OR CONTINUE WITH'}) {
     return Row(
       children: [
         Expanded(
@@ -685,7 +701,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             ],
           ),
           child: Text(
-            'OR CONTINUE WITH',
+            text,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,

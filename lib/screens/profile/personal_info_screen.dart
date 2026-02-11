@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../bloc/profile/profile_bloc.dart';
 import '../../bloc/profile/profile_event.dart';
 import '../../bloc/profile/profile_state.dart';
+import '../../config/theme.dart';
 import '../../core/service_locator.dart';
 import '../../core/validators.dart';
 import '../../models/user_profile.dart';
@@ -22,8 +23,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
-  late TextEditingController _cityController;
-  late TextEditingController _postcodeController;
   late TextEditingController _countryController;
 
   @override
@@ -32,8 +31,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       _emailController.dispose();
       _phoneController.dispose();
       _addressController.dispose();
-      _cityController.dispose();
-      _postcodeController.dispose();
       _countryController.dispose();
     }
     super.dispose();
@@ -44,10 +41,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   void _initializeControllers(UserProfile profile) {
     if (_controllersInitialized) return;
     _emailController = TextEditingController(text: profile.email);
-    _phoneController = TextEditingController(text: profile.phone ?? '');
-    _addressController = TextEditingController(text: profile.address ?? '');
-    _cityController = TextEditingController(text: profile.city ?? '');
-    _postcodeController = TextEditingController(text: profile.postcode ?? '');
+    _phoneController = TextEditingController(text: profile.phone ?? profile.taskerProfile?.ecocashNumber ?? '');
+    _addressController = TextEditingController(text: profile.address ?? profile.taskerProfile?.primaryAddress ?? '');
     _countryController = TextEditingController(text: profile.country ?? 'Zimbabwe');
     _controllersInitialized = true;
   }
@@ -85,133 +80,141 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
   Widget _buildForm(BuildContext context, ProfileLoaded state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Full Name (read-only)
-            TextFormField(
-              initialValue: state.profile.name,
-              decoration: const InputDecoration(
-                labelText: 'Full Name',
-                prefixIcon: Icon(Icons.person_outline),
-                suffixIcon: Icon(Icons.lock_outline, size: 18),
-              ),
-              readOnly: true,
-              enabled: false,
-            ),
-
-            const SizedBox(height: 20),
-
-            // Email (read-only)
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined),
-                suffixIcon: Icon(Icons.lock_outline, size: 18),
-              ),
-              readOnly: true,
-              enabled: false,
-            ),
-
-            const SizedBox(height: 20),
-
-            // Phone
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number',
-                hintText: '+263 7X XXX XXXX',
-                prefixIcon: Icon(Icons.phone_outlined),
-              ),
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) return null;
-                // Basic check, or use Validators.phone if it supports generic
-                return null; 
-              },
-            ),
-
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 12),
-
+            // Section Header
             Text(
-              'Address',
-              style: Theme.of(context).textTheme.titleMedium!.copyWith(
+              'Account Details',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: AppTheme.navy,
                   ),
             ),
+            const SizedBox(height: 24),
 
+            // Full Name (read-only)
+            _buildReadOnlyField('Full Name', state.profile.name, Icons.person_outline),
             const SizedBox(height: 16),
 
-            // Street Address
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'Street Address',
-                hintText: '123 Samora Machel Ave',
-                prefixIcon: Icon(Icons.home_outlined),
-              ),
-            ),
+            // Email (read-only)
+            _buildReadOnlyField('Email', state.profile.email, Icons.email_outlined),
+            const SizedBox(height: 16),
 
-            const SizedBox(height: 20),
-
-            // City & Postcode
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    controller: _cityController,
-                    decoration: const InputDecoration(
-                      labelText: 'City',
-                      hintText: 'Harare',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _postcodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Postcode',
-                      hintText: '00263',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // Country
-            TextFormField(
-              controller: _countryController,
-              decoration: const InputDecoration(
-                labelText: 'Country',
-                prefixIcon: Icon(Icons.public),
-              ),
-              readOnly: true, // Make it read-only as verified default
+            // Phone
+            _buildTextField(
+              controller: _phoneController,
+              label: 'Phone Number',
+              hint: '+263 7X XXX XXXX',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
             ),
 
             const SizedBox(height: 32),
+            Divider(height: 32, thickness: 1, color: AppTheme.neutral200),
+            
+            Text(
+              'Address Details',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.navy,
+                  ),
+            ),
+            const SizedBox(height: 24),
+
+            // Street Address
+            _buildTextField(
+              controller: _addressController,
+              label: 'Street Address',
+              hint: '123 Samora Machel Ave',
+              icon: Icons.home_outlined,
+            ),
+            const SizedBox(height: 16),
+
+            const SizedBox(height: 16),
+            // Country
+            _buildReadOnlyField('Country', _countryController.text, Icons.public),
+
+            const SizedBox(height: 48),
 
             // Save button
             ElevatedButton(
               onPressed: () => _saveInfo(context, state),
               style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+                shadowColor: Colors.transparent,
               ),
-              child: const Text('Save Changes'),
+              child: const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value, IconData icon) {
+    return TextFormField(
+      initialValue: value,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: AppTheme.neutral500),
+        suffixIcon: const Icon(Icons.lock_outline, size: 16, color: AppTheme.neutral400),
+        filled: true,
+        fillColor: AppTheme.neutral100,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+      ),
+      style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+      readOnly: true,
+      enabled: false,
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    IconData? icon,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppTheme.neutral400),
+        prefixIcon: icon != null ? Icon(icon, color: AppTheme.primary) : null,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.neutral200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.neutral200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+      ),
+      style: const TextStyle(color: AppTheme.navy, fontWeight: FontWeight.w500),
     );
   }
 
@@ -220,9 +223,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       final updatedProfile = state.profile.copyWith(
         phone: _phoneController.text.trim(),
         address: _addressController.text.trim(),
-        city: _cityController.text.trim(),
-        postcode: _postcodeController.text.trim(),
         country: _countryController.text.trim(),
+        latitude: state.profile.latitude ?? state.profile.taskerProfile?.primaryLatitude,
+        longitude: state.profile.longitude ?? state.profile.taskerProfile?.primaryLongitude,
       );
 
       context.read<ProfileBloc>().add(UpdateProfile(updatedProfile));

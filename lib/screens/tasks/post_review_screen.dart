@@ -97,7 +97,6 @@ class _PostReviewScreenState extends State<PostReviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: AppTheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );

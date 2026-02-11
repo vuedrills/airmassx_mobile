@@ -32,12 +32,14 @@ class Message {
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
       id: json['id'],
-      conversationId: json['conversationId'],
-      senderId: json['senderId'],
-      receiverId: json['receiverId'],
+      conversationId: json['conversationId'] ?? json['conversation_id'],
+      senderId: json['senderId'] ?? json['sender_id'],
+      receiverId: json['receiverId'] ?? json['receiver_id'],
       content: json['content'],
-      timestamp: DateTime.parse(json['timestamp']),
-      read: json['read'] ?? false,
+      timestamp: json['timestamp'] != null 
+          ? DateTime.parse(json['timestamp']) 
+          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
+      read: json['read'] ?? json['is_read'] ?? false,
     );
   }
 

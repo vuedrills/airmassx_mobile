@@ -82,6 +82,7 @@ dependencies:
   facebook_app_events: ^0.24.0
   connectivity_plus: ^7.0.0
   flutter_map_marker_cluster: ^8.2.2
+  flutter_animate: ^4.5.2
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +97,9 @@ flutter:
     - assets/images/
     - assets/icons/
     - shorebird.yaml
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 21

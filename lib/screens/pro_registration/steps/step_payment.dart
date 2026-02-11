@@ -91,6 +91,8 @@ class _StepPaymentState extends State<StepPayment> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final bool isSmallScreen = MediaQuery.of(context).size.height < 700;
+    
     return BlocBuilder<ProRegistrationBloc, ProRegistrationState>(
       builder: (context, state) {
         return Column(
@@ -120,7 +122,7 @@ class _StepPaymentState extends State<StepPayment> with TickerProviderStateMixin
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    if (isSmallScreen) const SizedBox(height: 16) else const SizedBox(height: 32),
 
                     // Option to add now or later
                     if (!_wantsToAddNow) ...[
@@ -302,7 +304,7 @@ class _StepPaymentState extends State<StepPayment> with TickerProviderStateMixin
                       ),
                     ],
                     
-                    const SizedBox(height: 24),
+                    if (isSmallScreen) const SizedBox(height: 12) else const SizedBox(height: 24),
 
                     // Info Box
                     FadeTransition(
@@ -334,7 +336,7 @@ class _StepPaymentState extends State<StepPayment> with TickerProviderStateMixin
                         ),
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    if (isSmallScreen) const SizedBox(height: 16) else const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -346,7 +348,12 @@ class _StepPaymentState extends State<StepPayment> with TickerProviderStateMixin
               child: SlideTransition(
                 position: _slideAnimations[3],
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  padding: EdgeInsets.fromLTRB(
+                    20, 
+                    isSmallScreen ? 12 : 16, 
+                    20, 
+                    isSmallScreen ? 20 : (MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 8 : 32)
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     boxShadow: [

@@ -299,7 +299,6 @@ class _MakeOfferContentState extends State<_MakeOfferContent> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Bid submitted successfully!'),
-              backgroundColor: AppTheme.success,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -312,7 +311,6 @@ class _MakeOfferContentState extends State<_MakeOfferContent> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage ?? 'Failed to submit bid'),
-                backgroundColor: AppTheme.error,
                 behavior: SnackBarBehavior.floating,
               ),
             );

@@ -26,18 +26,21 @@ class _TopUpScreenState extends State<TopUpScreen> {
       'id': 'ecocash',
       'name': 'EcoCash',
       'icon': LucideIcons.smartphone,
+      'image': 'assets/images/ecocash.png',
       'color': Colors.green,
     },
     {
       'id': 'onemoney',
       'name': 'OneMoney',
       'icon': LucideIcons.smartphone,
+      'image': 'assets/images/onemoney.jpg', // Using jpg as provided
       'color': Colors.purple,
     },
     {
       'id': 'innbucks',
       'name': 'InnBucks',
       'icon': LucideIcons.creditCard,
+      'image': 'assets/images/innbucks.png',
       'color': Colors.blue,
     },
     {
@@ -473,12 +476,22 @@ class _TopUpScreenState extends State<TopUpScreen> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: method['image'] != null ? const EdgeInsets.all(4) : const EdgeInsets.all(10),
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: method['color'].withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(method['icon'], color: method['color'], size: 20),
+              child: method['image'] != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.asset(
+                        method['image'],
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Icon(method['icon'], color: method['color'], size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(

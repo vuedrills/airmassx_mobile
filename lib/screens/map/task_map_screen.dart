@@ -18,18 +18,20 @@ import '../../bloc/map_settings/map_settings_cubit.dart';
 class TaskMapScreen extends StatefulWidget {
   final List<Task>? initialTasks;
   final String? taskType; // 'service' or 'equipment'
+  final Task? initialTask; // Task to initially focus on
 
   const TaskMapScreen({
     super.key,
     this.initialTasks,
     this.taskType,
+    this.initialTask,
   });
 
   @override
   State<TaskMapScreen> createState() => _TaskMapScreenState();
 }
 
-class _TaskMapScreenState extends State<TaskMapScreen> {
+class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateMixin {
   final MapController _mapController = MapController();
   final GeocodingService _geocodingService = GeocodingService();
   List<Task> _tasks = [];
@@ -50,12 +52,31 @@ class _TaskMapScreenState extends State<TaskMapScreen> {
   void initState() {
     super.initState();
     _loadCategories();
-    if (widget.initialTasks != null) {
+    
+    if (widget.initialTask != null) {
+      _selectedTask = widget.initialTask!;
+      // Add initial task to list if not present
+      if (_tasks.isEmpty) { 
+        _tasks = [widget.initialTask!];
+        _filteredTasks = _tasks;
+      }
+      
+      // Delay map move until layout is done
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final loc = _getTaskLocation(widget.initialTask!);
+        if (loc != null) {
+           _animatedMapMove(loc, 13.5);
+        }
+      });
+    }
+
+    if (widget.initialTasks != null && widget.initialTasks!.isNotEmpty) {
       _tasks = widget.initialTasks!;
       _filteredTasks = _tasks;
       _isLoading = false;
       _geocodeTasksWithoutCoordinates();
     } else {
+      // Always load all tasks if not explicitly provided list (except single init task)
       _loadTasks();
     }
   }
@@ -91,6 +112,47 @@ class _TaskMapScreenState extends State<TaskMapScreen> {
       print('Error loading tasks: $e');
       setState(() => _isLoading = false);
     }
+  }
+
+  AnimationController? _mapAnimationController;
+
+  @override
+  void dispose() {
+    _mapAnimationController?.dispose();
+    super.dispose();
+  }
+
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    // Clean up any existing animation
+    _mapAnimationController?.dispose();
+    _mapAnimationController = null;
+
+    final latTween = Tween<double>(begin: _mapController.camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(begin: _mapController.camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom);
+
+    final controller = AnimationController(duration: const Duration(milliseconds: 1000), vsync: this);
+    _mapAnimationController = controller;
+    
+    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    controller.addListener(() {
+      _mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+        controller.dispose();
+        if (_mapAnimationController == controller) {
+          _mapAnimationController = null;
+        }
+      }
+    });
+
+    controller.forward();
   }
 
   Future<void> _geocodeTasksWithoutCoordinates() async {
@@ -147,21 +209,21 @@ class _TaskMapScreenState extends State<TaskMapScreen> {
                 });
             },
             child: Container(
-                width: 20,
-                height: 20,
+                width: 14,
+                height: 14,
                 decoration: BoxDecoration(
                   color: markerColor,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
                     ),
                   ],
                   border: Border.all(
                     color: Colors.white,
-                    width: 2.0,
+                    width: 1.5,
                   ),
                 ),
             ),
@@ -175,6 +237,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(widget.taskType == 'equipment'
             ? 'Equipment Map'
@@ -196,131 +259,134 @@ class _TaskMapScreenState extends State<TaskMapScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          DynamicMap(
-            osmController: _mapController,
-            initialCenter: _defaultCenter,
-            initialZoom: 12,
-            forceProvider: MapProvider.osm,
-            onTap: (latLng) {
-                setState(() {
-                  _selectedTask = null;
-                });
-            },
-            markers: _buildDynamicMarkers(),
-          ),
-
-          // Loading overlay
-          if (_isLoading)
-            Container(
-              color: Colors.white.withOpacity(0.7),
-              child: const Center(
-                child: CircularProgressIndicator(),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            DynamicMap(
+              osmController: _mapController,
+              initialCenter: _defaultCenter,
+              initialZoom: 12,
+              forceProvider: MapProvider.osm,
+              tileUrl: _mapTileUrl,
+              onTap: (latLng) {
+                  setState(() {
+                    _selectedTask = null;
+                  });
+              },
+              markers: _buildDynamicMarkers(),
+            ),
+  
+            // Loading overlay
+            if (_isLoading)
+              Container(
+                color: Colors.white.withOpacity(0.7),
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+  
+            // Zoom controls (mimicking web app style)
+            Positioned(
+              top: 80, // Offset from top to avoid overlapping with top-left badge
+              right: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildMapActionBtn(Icons.add, () {
+                      final zoom = _mapController.camera.zoom + 1;
+                      _mapController.move(_mapController.camera.center, zoom);
+                    }),
+                    Container(height: 1, width: 24, color: Colors.grey.shade200),
+                    _buildMapActionBtn(Icons.remove, () {
+                      final zoom = _mapController.camera.zoom - 1;
+                      _mapController.move(_mapController.camera.center, zoom);
+                    }),
+                    Container(height: 1, width: 24, color: Colors.grey.shade200),
+                    _buildMapActionBtn(Icons.my_location, () {
+                      _mapController.move(_defaultCenter, 12);
+                    }),
+                  ],
+                ),
               ),
             ),
-
-          // Zoom controls (mimicking web app style)
-          Positioned(
-            top: 80, // Offset from top to avoid overlapping with top-left badge
-            right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+  
+            // Task count & Legend
+            Positioned(
+              top: 16,
+              left: 16,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildMapActionBtn(Icons.add, () {
-                    final zoom = _mapController.camera.zoom + 1;
-                    _mapController.move(_mapController.camera.center, zoom);
-                  }),
-                  Container(height: 1, width: 24, color: Colors.grey.shade200),
-                  _buildMapActionBtn(Icons.remove, () {
-                    final zoom = _mapController.camera.zoom - 1;
-                    _mapController.move(_mapController.camera.center, zoom);
-                  }),
-                  Container(height: 1, width: 24, color: Colors.grey.shade200),
-                  _buildMapActionBtn(Icons.my_location, () {
-                    _mapController.move(_defaultCenter, 12);
-                  }),
-                ],
-              ),
-            ),
-          ),
-
-          // Task count & Legend
-          Positioned(
-            top: 16,
-            left: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '${_buildDynamicMarkers().length} items on map',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
-                    ],
-                  ),
-                  child: Text(
-                    '${_buildDynamicMarkers().length} items on map',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLegendItem(AppTheme.accentRed, 'Tasks'),
+                        const SizedBox(height: 4),
+                        _buildLegendItem(Colors.green, 'Equipment'),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLegendItem(AppTheme.accentRed, 'Tasks'),
-                      const SizedBox(height: 4),
-                      _buildLegendItem(Colors.green, 'Equipment'),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-
-          // Selected task card
-          if (_selectedTask != null)
+  
+            // Selected task card
+            if (_selectedTask != null)
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: _buildSelectedTaskCard(),
+              ),
+  
+            // Category Dropdown Filter
             Positioned(
-              bottom: 16,
-              left: 16,
+              top: 16,
               right: 16,
-              child: _buildSelectedTaskCard(),
+              left: 150, // Avoid overlapping with "items on map" badge
+              child: _buildCategoryDropdown(),
             ),
-
-          // Category Dropdown Filter
-          Positioned(
-            top: 16,
-            right: 16,
-            left: 150, // Avoid overlapping with "items on map" badge
-            child: _buildCategoryDropdown(),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

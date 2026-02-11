@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../bloc/message/message_bloc.dart';
 import '../../bloc/message/message_event.dart';
@@ -33,6 +34,11 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     
     // Listen for sync triggers from RealtimeService
     _syncSubscription = getIt<RealtimeService>().syncUnreadCount.listen((_) {
+      _loadUnreadCounts();
+    });
+    
+    // Also listen for direct message events to update badge counts
+    getIt<RealtimeService>().messageReceived.listen((_) {
       _loadUnreadCounts();
     });
   }
@@ -158,13 +164,24 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
             final conversations = state.conversations;
 
             if (conversations.isEmpty) {
-              return const Center(
+              return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.chat_bubble_outline, size: 64, color: AppTheme.textSecondary),
-                    SizedBox(height: 16),
-                    Text('No conversations yet', style: TextStyle(fontSize: 18, color: AppTheme.textSecondary)),
+                    const Icon(Icons.chat_bubble_outline, size: 64, color: AppTheme.textSecondary),
+                    const SizedBox(height: 16),
+                    const Text('No conversations yet', style: TextStyle(fontSize: 18, color: AppTheme.textSecondary)),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/create-task'),
+                      icon: const Icon(Icons.add_rounded, color: Colors.white),
+                      label: const Text('Post a Task'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    ),
                   ],
                 ),
               );

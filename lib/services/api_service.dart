@@ -30,10 +30,32 @@ import 'dart:io';
 
 class ApiService {
   // Determine the correct base URL dynamically
-  static String get baseUrl => AppConfig.shared.apiUrl;
+  static String get baseUrl {
+    if (kIsWeb) return AppConfig.shared.apiUrl;
+    if (Platform.isAndroid) {
+        // Android Emulator loopback
+        final current = AppConfig.shared.apiUrl;
+        if (current.contains('localhost') || current.contains('127.0.0.1')) {
+            return current.replaceAll(RegExp(r'localhost|127\.0\.0\.1'), '10.0.2.2');
+        }
+        return current;
+    }
+    return AppConfig.shared.apiUrl;
+  }
 
   // Asset base URL for images
-  static String get assetBaseUrl => AppConfig.shared.assetBaseUrl;
+  static String get assetBaseUrl {
+    if (kIsWeb) return AppConfig.shared.assetBaseUrl;
+    if (Platform.isAndroid) {
+        // Android Emulator loopback
+        final current = AppConfig.shared.assetBaseUrl;
+        if (current.contains('localhost') || current.contains('127.0.0.1')) {
+            return current.replaceAll(RegExp(r'localhost|127\.0\.0\.1'), '10.0.2.2');
+        }
+        return current;
+    }
+    return AppConfig.shared.assetBaseUrl;
+  }
 
   String? _accessToken;
   String? _refreshToken;
@@ -263,18 +285,27 @@ class ApiService {
     debugPrint('ApiService Response: ${e.response?.data}');
     
     final statusCode = e.response?.statusCode ?? 0;
-    String message = 'Network error';
+    String message = 'Network error. Please check your connection.';
     String? code;
     
-    if (e.response?.data != null && e.response?.data is Map) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      message = 'Connection timed out. Please check your internet.';
+    } else if (e.type == DioExceptionType.connectionError) {
+      message = 'Unable to connect to server. Please check your internet.';
+    } else if (e.response?.data != null && e.response?.data is Map) {
       message = e.response?.data['error'] ?? e.message ?? 'Unknown error';
       code = e.response?.data['code'];
-    } else if (e.message != null) {
-      message = e.message!;
+    } else if (e.message != null && !e.message!.contains('ApiException')) {
+      // Only use the raw message if we really have nothing else, but cleaner to default to generic
+      // message = e.message!; 
     }
     
     if (statusCode == 401) {
-      message = 'Unauthorized';
+      if (message == 'Network error. Please check your connection.' || message == 'Unknown error') {
+        message = 'Unauthorized';
+      }
     }
     
     return ApiException(message, statusCode, code: code);
@@ -421,8 +452,10 @@ class ApiService {
     String? posterId,
     String? taskType,
     String? tier,
+    int limit = 20,
+    int offset = 0,
   }) async {
-    String endpoint = '/tasks?';
+    String endpoint = '/tasks?limit=$limit&offset=$offset&';
     
     if (criteria != null) {
       if (criteria.taskStatus.isNotEmpty) {
@@ -1081,8 +1114,11 @@ class ApiService {
       city: data['city'],
       businessName: data['business_name'],
       businessAddress: data['business_address'],
+      suburb: data['suburb'],
       country: data['country'],
       postcode: data['postcode'],
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
       dateOfBirth: data['date_of_birth'] != null
           ? DateTime.parse(data['date_of_birth'])
           : null,
@@ -1692,6 +1728,10 @@ class ApiException implements Exception {
       case 400:
         return 'Invalid request. Please check your input.';
       case 401:
+        // Use the backend message if it's more specific than 'Unauthorized'
+        if (message != 'Unauthorized' && message.isNotEmpty && !message.contains('Network error')) {
+          return message;
+        }
         return 'Session expired. Please log in again.';
       case 402:
         return 'Insufficient wallet balance. Please top up your wallet.';

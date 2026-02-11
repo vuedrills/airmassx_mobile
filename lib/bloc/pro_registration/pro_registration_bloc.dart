@@ -163,6 +163,20 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
       };
 
       await _apiService.updateTaskerProfile(profileData);
+
+      // Pulse core user profile with new info
+      if (initialProfile != null) {
+        final coreUpdates = {
+          'phone': state.phone,
+          'address': state.primaryAddress,
+          'city': state.primaryCity,
+          'suburb': state.primarySuburb,
+          'latitude': state.primaryLatitude,
+          'longitude': state.primaryLongitude,
+        };
+        await _apiService.updateUser(initialProfile!.id, coreUpdates);
+      }
+
       emit(state.copyWith(status: ProRegistrationStatus.success));
     } catch (e) {
       emit(state.copyWith(

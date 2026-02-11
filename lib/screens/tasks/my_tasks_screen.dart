@@ -180,6 +180,17 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                             color: Colors.grey.shade600,
                           ),
                         ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () => context.push('/create-task'),
+                          icon: const Icon(Icons.add_rounded, color: Colors.white),
+                          label: const Text('Post a Task'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                        ),
                       ],
                     ),
                   );

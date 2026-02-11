@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -38,20 +39,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
     // Staggered animations for form elements
     // 0: Header, 1: Email, 2: Password, 3: Forgot Pass, 4: Button, 5: OR divider, 6: Social Auth, 7: Signup
-    _fadeAnimations = List.generate(8, (index) {
+    _fadeAnimations = List.generate(9, (index) {
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _animationController,
-          curve: Interval(index * 0.08, 0.4 + index * 0.08, curve: Curves.easeOut),
+          curve: Interval(index * 0.06, 0.3 + index * 0.06, curve: Curves.easeOut),
         ),
       );
     });
 
-    _slideAnimations = List.generate(8, (index) {
+    _slideAnimations = List.generate(9, (index) {
       return Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
         CurvedAnimation(
           parent: _animationController,
-          curve: Interval(index * 0.08, 0.4 + index * 0.08, curve: Curves.easeOut),
+          curve: Interval(index * 0.06, 0.3 + index * 0.06, curve: Curves.easeOut),
         ),
       );
     });
@@ -100,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           ),
           child: IconButton(
             icon: const Icon(Icons.close, color: AppTheme.textPrimary, size: 20),
-            onPressed: () => context.go('/onboarding'),
+            onPressed: () => context.go('/welcome'),
             splashRadius: 20,
           ),
         ),
@@ -185,12 +186,45 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 32),
+
+                    // Social Auth (Moved to Top)
+                    _buildAnimatedWidget(
+                      index: 1,
+                      child: Column(
+                        children: [
+                          BlocBuilder<AuthBloc, AuthState>(
+                            builder: (context, state) {
+                              return _buildSocialButton(
+                                context,
+                                label: 'Continue with Google',
+                                icon: Icons.g_mobiledata_outlined,
+                                color: AppTheme.textPrimary,
+                                isLoading: state is AuthLoading,
+                                onTap: () {
+                                  context.read<AuthBloc>().add(AuthGoogleLogin());
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                     
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 24),
+                    
+                    // OR Divider (Moved to Top)
+                    _buildAnimatedWidget(
+                      index: 2,
+                      child: _buildPremiumDivider(text: 'OR LOGIN WITH EMAIL'),
+                    ),
+
+                    const SizedBox(height: 24),
                     
                     // Email
                     _buildAnimatedWidget(
-                      index: 1,
+                      index: 3,
                       child: _buildTextField(
                         controller: _emailController,
                         label: 'Email Address',
@@ -206,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     
                     // Password
                     _buildAnimatedWidget(
-                      index: 2,
+                      index: 4,
                       child: _buildTextField(
                         controller: _passwordController,
                         label: 'Password',
@@ -229,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     
                     // Forgot Password
                     _buildAnimatedWidget(
-                      index: 3,
+                      index: 5,
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -248,7 +282,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     
                     // Login Button
                     _buildAnimatedWidget(
-                      index: 4,
+                      index: 6,
                       child: BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           return Container(
@@ -298,39 +332,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     
                     const SizedBox(height: 32),
                     
-                    // OR Divider
-                    _buildAnimatedWidget(
-                      index: 5,
-                      child: _buildPremiumDivider(),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Social Auth
-                    _buildAnimatedWidget(
-                      index: 6,
-                      child: Column(
-                        children: [
-                          BlocBuilder<AuthBloc, AuthState>(
-                            builder: (context, state) {
-                              return _buildSocialButton(
-                                context,
-                                label: 'Continue with Google',
-                                icon: Icons.g_mobiledata_outlined,
-                                color: AppTheme.textPrimary,
-                                isLoading: state is AuthLoading,
-                                onTap: () {
-                                  context.read<AuthBloc>().add(AuthGoogleLogin());
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 48), // Spacer
-                    
                     // Sign Up Link
                     _buildAnimatedWidget(
                       index: 7,
@@ -362,6 +363,63 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // Terms and Privacy Links
+                     _buildAnimatedWidget(
+                      index: 8,
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              'By continuing, you agree to our',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                GestureDetector(
+                                  onTap: () => _launchUrl('https://www.airmassxpress.com/terms'),
+                                  child: const Text(
+                                    'Terms & Conditions',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  ' and ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => _launchUrl('https://www.airmassxpress.com/privacy_policy'),
+                                  child: const Text(
+                                    'Privacy Policy',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     
                     const SizedBox(height: 20),
                   ],
@@ -372,6 +430,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         ),
       ),
     );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    if (!await canLaunchUrl(Uri.parse(url))) {
+      debugPrint('Could not launch $url');
+      return;
+    }
+    await launchUrl(Uri.parse(url));
   }
 
   Widget _buildAnimatedWidget({required int index, required Widget child}) {
@@ -458,7 +524,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildPremiumDivider() {
+  Widget _buildPremiumDivider({String text = 'OR CONTINUE WITH'}) {
     return Row(
       children: [
         Expanded(
@@ -485,7 +551,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             ],
           ),
           child: Text(
-            'OR CONTINUE WITH',
+            text,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,

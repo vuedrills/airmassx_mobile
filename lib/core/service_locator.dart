@@ -39,7 +39,7 @@ void setupServiceLocator() {
   getIt.registerFactory(() => CreateTaskBloc(getIt<ApiService>()));
   getIt.registerFactory(() => OfferBloc());
   getIt.registerFactory(() => OfferListBloc(getIt<ApiService>()));
-  getIt.registerFactory(() => MessageBloc(getIt<ApiService>()));
+  getIt.registerFactory(() => MessageBloc(getIt<ApiService>(), getIt<RealtimeService>()));
   getIt.registerLazySingleton<ProfileBloc>(() => ProfileBloc(getIt<ApiService>()));
   getIt.registerFactory(() => QuestionBloc(getIt<ApiService>()));
   getIt.registerFactory(() => BrowseBloc(getIt<ApiService>()));

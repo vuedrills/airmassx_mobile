@@ -25,8 +25,11 @@ class User {
   final TaskerProfile? taskerProfile;
   final String? address;
   final String? city;
+  final String? suburb;
   final String? country;
   final String? postcode;
+  final double? latitude;
+  final double? longitude;
   final DateTime? dateOfBirth;
   final List<UserBadge> badges;
   final int tasksCompleted;
@@ -55,8 +58,11 @@ class User {
     this.taskerProfile,
     this.address,
     this.city,
+    this.suburb,
     this.country,
     this.postcode,
+    this.latitude,
+    this.longitude,
     this.dateOfBirth,
     this.badges = const [],
     this.tasksCompleted = 0,
@@ -101,8 +107,11 @@ class User {
           : null,
       address: json['address'] as String?,
       city: json['city'] as String?,
+      suburb: json['suburb'] as String?,
       country: json['country'] as String?,
       postcode: json['postcode'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       dateOfBirth: json['date_of_birth'] != null
           ? DateTime.parse(json['date_of_birth'] as String)
           : null,
@@ -140,8 +149,11 @@ class User {
       'member_since': memberSince.toIso8601String(),
       'address': address,
       'city': city,
-      'country': country,
+      'suburb': suburb,
+       'country': country,
       'postcode': postcode,
+      'latitude': latitude,
+      'longitude': longitude,
       'date_of_birth': dateOfBirth?.toIso8601String(),
       'badges': badges.map((e) => e.toJson()).toList(),
       'tasks_completed': tasksCompleted,
@@ -150,5 +162,74 @@ class User {
       'business_name': businessName,
       'business_address': businessAddress,
     };
+  }
+  User copyWith({
+    String? id,
+    String? email,
+    String? name,
+    String? phone,
+    String? profileImage,
+    String? bio,
+    List<String>? skills,
+    double? rating,
+    int? totalReviews,
+    bool? isVerified,
+    String? verificationType,
+    List<PortfolioItem>? portfolio,
+    List<Review>? reviews,
+    Map<String, double>? ratingCategories,
+    String? userType,
+    bool? isTasker,
+    TaskerProfile? taskerProfile,
+    DateTime? memberSince,
+    String? address,
+    String? city,
+    String? suburb,
+    String? country,
+     String? postcode,
+    double? latitude,
+    double? longitude,
+    DateTime? dateOfBirth,
+    List<UserBadge>? badges,
+    int? tasksCompleted,
+    int? tasksPostedCompleted,
+    int? tasksCompletedOnTime,
+    String? businessName,
+    String? businessAddress,
+  }) {
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      profileImage: profileImage ?? this.profileImage,
+      bio: bio ?? this.bio,
+      skills: skills ?? this.skills,
+      rating: rating ?? this.rating,
+      totalReviews: totalReviews ?? this.totalReviews,
+      isVerified: isVerified ?? this.isVerified,
+      verificationType: verificationType ?? this.verificationType,
+      portfolio: portfolio ?? this.portfolio,
+      reviews: reviews ?? this.reviews,
+      ratingCategories: ratingCategories ?? this.ratingCategories,
+      userType: userType ?? this.userType,
+      isTasker: isTasker ?? this.isTasker,
+      taskerProfile: taskerProfile ?? this.taskerProfile,
+      memberSince: memberSince ?? this.memberSince,
+      address: address ?? this.address,
+      city: city ?? this.city,
+      suburb: suburb ?? this.suburb,
+      country: country ?? this.country,
+       postcode: postcode ?? this.postcode,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      badges: badges ?? this.badges,
+      tasksCompleted: tasksCompleted ?? this.tasksCompleted,
+      tasksPostedCompleted: tasksPostedCompleted ?? this.tasksPostedCompleted,
+      tasksCompletedOnTime: tasksCompletedOnTime ?? this.tasksCompletedOnTime,
+      businessName: businessName ?? this.businessName,
+      businessAddress: businessAddress ?? this.businessAddress,
+    );
   }
 }

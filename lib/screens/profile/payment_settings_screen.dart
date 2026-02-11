@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../bloc/profile/profile_bloc.dart';
 import '../../bloc/profile/profile_event.dart';
 import '../../bloc/profile/profile_state.dart';
@@ -26,6 +27,7 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -34,7 +36,10 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileUpdated) {
-            UIUtils.showSnackBar(context, 'EcoCash number updated');
+            UIUtils.showSnackBar(context, 'Payment settings updated successfully');
+            context.pop();
+          } else if (state is ProfileError) {
+             UIUtils.showSnackBar(context, state.message, isError: true);
           }
         },
         builder: (context, state) {
@@ -60,79 +65,130 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
 
   Widget _buildEcoCashForm(BuildContext context, ProfileLoaded state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.phonelink_ring_outlined,
-              size: 64,
-              color: AppTheme.navy,
+            // Icon Header
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_outlined, // Changed icon
+                  size: 48,
+                  color: AppTheme.primary,
+                ),
+              ),
             ),
             const SizedBox(height: 24),
+            
             Text(
-              'EcoCash Settings',
+              'Payout Method',
+              textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall!.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: AppTheme.navy,
                   ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Enter your EcoCash number where you\'ll receive payments for tasks.',
+              'Receive payments directly to your EcoCash wallet.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
             ),
-            const SizedBox(height: 32),
+            
+            const SizedBox(height: 40),
+            
+            // Input Field
+            Text(
+              'EcoCash Mobile Number',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.navy,
+              ),
+            ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _ecocashController,
-              decoration: const InputDecoration(
-                labelText: 'EcoCash Number',
-                hintText: '077XXXXXXX',
-                prefixIcon: Icon(Icons.phone_android),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: '077 123 4567',
+                prefixIcon: const Icon(Icons.phone_android, color: AppTheme.primary),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppTheme.neutral200),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppTheme.neutral200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                ),
               ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               keyboardType: TextInputType.phone,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter your EcoCash number';
                 }
-                if (!RegExp(r'^(077|078|071)\d{7}$').hasMatch(value)) {
-                  return 'Enter a valid Zimbabwe mobile number';
+                // Basic flexible validation
+                if (value.length < 9) {
+                   return 'Please enter a valid number';
                 }
                 return null;
               },
             ),
+
             const SizedBox(height: 40),
+
+            // Save Button
             ElevatedButton(
               onPressed: () => _handleSave(context, state),
               style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
               ),
-              child: const Text('Save EcoCash Number'),
+              child: const Text('Save Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 32),
+
+            // Info Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.navy.withOpacity(0.05),
+                color: AppTheme.info.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.info.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: AppTheme.navy, size: 20),
-                  const SizedBox(width: 12),
+                  const Icon(Icons.info_outline, color: AppTheme.info, size: 24),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      'Payments are made directly to your EcoCash account by the client upon task completion.',
+                      'Payments are processed automatically upon task completion. Ensure your number is registered with EcoCash.',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: AppTheme.navy.withOpacity(0.8),
+                        height: 1.5,
                       ),
                     ),
                   ),

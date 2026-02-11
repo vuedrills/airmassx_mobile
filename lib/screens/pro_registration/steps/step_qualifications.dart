@@ -750,7 +750,7 @@ class _StepQualificationsState extends State<StepQualifications> with TickerProv
       if (mounted) {
         setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed to upload: ${e.toString()}')),
         );
       }
     }

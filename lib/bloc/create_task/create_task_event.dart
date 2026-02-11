@@ -228,6 +228,14 @@ class CreateTaskReset extends CreateTaskEvent {
   List<Object?> get props => [taskType];
 }
 
+/// Initialize the form with existing task data (for editing)
+class CreateTaskInitialize extends CreateTaskEvent {
+  final dynamic task; // Using dynamic to avoid circular import, should be Task model
+  const CreateTaskInitialize(this.task);
+  @override
+  List<Object?> get props => [task];
+}
+
 class CreateTaskProvisionTypeChanged extends CreateTaskEvent {
   final String provisionType;
   const CreateTaskProvisionTypeChanged(this.provisionType);

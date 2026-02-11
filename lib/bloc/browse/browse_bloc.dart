@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/error_handler.dart';
 import '../../services/api_service.dart';
 import '../../models/task.dart';
 import '../../models/category.dart';
@@ -18,6 +19,52 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
     on<SelectCategory>(_onSelectCategory);
     on<SetSortOption>(_onSetSortOption);
     on<ToggleView>(_onToggleView);
+    on<LoadMoreTasks>(_onLoadMoreTasks);
+  }
+
+  Future<void> _onLoadMoreTasks(
+    LoadMoreTasks event,
+    Emitter<BrowseState> emit,
+  ) async {
+    if (state is! BrowseLoaded) return;
+    final currentState = state as BrowseLoaded;
+
+    if (currentState.hasReachedMax) return;
+
+    try {
+      final currentTasks = currentState.tasks;
+      final limit = 20;
+      final offset = currentTasks.length;
+
+      // Handle filters if any
+      FilterCriteria? criteria; 
+      // Note: We might need to store criteria in state if we want to support load more with filters properly.
+      // Currently LoadBrowseTasksWithFilter hardcodes criteria to 'open'.
+      // Let's assume for now we just use the basic taskType/tier filters stored in state.
+      
+      final newTasks = await _apiService.getTasks(
+        taskType: currentState.taskType,
+        tier: currentState.tier,
+        limit: limit,
+        offset: offset,
+        // criteria: ... we need to persist criteria in state to support this fully
+      );
+
+      if (newTasks.isEmpty) {
+        emit(currentState.copyWith(hasReachedMax: true));
+      } else {
+        emit(currentState.copyWith(
+          tasks: List.of(currentState.tasks)..addAll(newTasks),
+          hasReachedMax: newTasks.length < limit,
+          page: currentState.page + 1,
+        ));
+      }
+    } catch (e) {
+      // For pagination error, maybe show a snackbar or just ignore?
+      // Emitting BrowseError would replace the whole UI with error screen which is bad.
+      // We'll just ignore or log for now.
+      print('Pagination error: $e');
+    }
   }
 
   Future<void> _onLoadBrowseTasks(
@@ -28,13 +75,19 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
     final currentCategories = state is BrowseLoaded ? (state as BrowseLoaded).categories : <Category>[];
     final currentSort = state is BrowseLoaded ? (state as BrowseLoaded).sortOption : SortOption.newestPosted;
     final isMapView = state is BrowseLoaded ? (state as BrowseLoaded).isMapView : false;
+    final currentTaskType = state is BrowseLoaded ? (state as BrowseLoaded).taskType : null;
+    final currentTier = state is BrowseLoaded ? (state as BrowseLoaded).tier : null;
 
     emit(BrowseLoading());
     try {
       
       // Fetch tasks and ads in parallel
       final results = await Future.wait([
-        _apiService.getTasks(criteria: event.criteria),
+        _apiService.getTasks(
+          criteria: event.criteria,
+          taskType: currentTaskType,
+          tier: currentTier,
+        ),
         _apiService.getAds(),
         currentCategories.isEmpty ? _apiService.getCategories() : Future.value(currentCategories),
       ]);
@@ -49,16 +102,21 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         ads: ads,
         sortOption: currentSort,
         isMapView: isMapView,
+        taskType: currentTaskType,
+        tier: currentTier,
       ));
     } catch (e) {
-      emit(BrowseError(e.toString()));
+      emit(BrowseError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
+
+  int _currentRequestId = 0;
 
   Future<void> _onLoadBrowseTasksWithFilter(
     LoadBrowseTasksWithFilter event,
     Emitter<BrowseState> emit,
   ) async {
+    final requestId = ++_currentRequestId;
     emit(BrowseLoading());
     try {
       // Map legacy event to FilterCriteria
@@ -77,6 +135,11 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         _apiService.getAds(),
       ]);
       
+      // Check if this request is still the latest one
+      if (requestId != _currentRequestId) {
+        return; // Ignore stale result
+      }
+      
       final tasks = results[0] as List<Task>;
       final categories = results[1] as List<Category>;
       final ads = results[2] as List<Ad>;
@@ -89,7 +152,9 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         tier: event.tier,
       ));
     } catch (e) {
-      emit(BrowseError(e.toString()));
+      if (requestId == _currentRequestId) {
+         emit(BrowseError(ErrorHandler.getUserFriendlyMessage(e)));
+      }
     }
   }
 
@@ -145,7 +210,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         }
       }
     } catch (e) {
-      emit(BrowseError(e.toString()));
+      emit(BrowseError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 

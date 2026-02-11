@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/error_handler.dart';
 import '../../services/api_service.dart';
 import '../../models/user_profile.dart';
 import '../../models/notification_settings.dart';
@@ -78,6 +79,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         city: user.city,
         country: user.country,
         postcode: user.postcode,
+        latitude: user.latitude,
+        longitude: user.longitude,
         dateOfBirth: user.dateOfBirth,
         taskerProfile: user.taskerProfile,
         badges: user.badges,
@@ -94,7 +97,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(ProfileError(e.statusCode == 401 ? 'Session expired. Please log in again.' : e.message));
     } catch (e) {
       print('ProfileBloc: Error in _onLoadProfile: $e');
-      emit(ProfileError('Failed to load profile: ${e.toString()}'));
+      emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -147,6 +150,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       if (event.profile.city != null) updates['city'] = event.profile.city;
       if (event.profile.country != null) updates['country'] = event.profile.country;
       if (event.profile.postcode != null) updates['postcode'] = event.profile.postcode;
+      if (event.profile.latitude != null) updates['latitude'] = event.profile.latitude;
+      if (event.profile.longitude != null) updates['longitude'] = event.profile.longitude;
       if (event.profile.dateOfBirth != null) {
         updates['date_of_birth'] = event.profile.dateOfBirth?.toIso8601String();
       }
@@ -228,7 +233,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       }).toList();
       emit(PaymentMethodsLoaded(methods));
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -251,7 +256,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       // Reload
       add(LoadPaymentMethods());
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -268,7 +273,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       // Reload
       add(LoadPaymentMethods());
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -290,7 +295,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       // Reload
       add(LoadPaymentMethods());
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 

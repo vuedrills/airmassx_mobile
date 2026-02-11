@@ -20,6 +20,9 @@ class LoadBrowseTasks extends BrowseEvent {
   List<Object?> get props => [criteria];
 }
 
+/// Load next page of tasks
+class LoadMoreTasks extends BrowseEvent {}
+
 /// Select a category filter
 class SelectCategory extends BrowseEvent {
   final String? categoryId;

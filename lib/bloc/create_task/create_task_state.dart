@@ -55,6 +55,7 @@ class CreateTaskState extends Equatable {
   final String? siteVisitAddress;
   final double? siteVisitLat;
   final double? siteVisitLng;
+  final String? taskId; // Valid when editing
 
   const CreateTaskState({
     this.title = '',
@@ -103,9 +104,11 @@ class CreateTaskState extends Equatable {
     this.siteVisitAddress,
     this.siteVisitLat,
     this.siteVisitLng,
+    this.taskId,
   });
 
   bool get isEquipmentTask => taskType == 'equipment';
+  bool get isEditing => taskId != null;
 
   CreateTaskState copyWith({
     String? title,
@@ -154,6 +157,7 @@ class CreateTaskState extends Equatable {
     String? siteVisitAddress,
     double? siteVisitLat,
     double? siteVisitLng,
+    String? taskId,
   }) {
     return CreateTaskState(
       title: title ?? this.title,
@@ -202,6 +206,7 @@ class CreateTaskState extends Equatable {
       siteVisitAddress: siteVisitAddress ?? this.siteVisitAddress,
       siteVisitLat: siteVisitLat ?? this.siteVisitLat,
       siteVisitLng: siteVisitLng ?? this.siteVisitLng,
+      taskId: taskId ?? this.taskId,
     );
   }
 
@@ -253,5 +258,6 @@ class CreateTaskState extends Equatable {
         siteVisitAddress,
         siteVisitLat,
         siteVisitLng,
+        taskId,
       ];
 }

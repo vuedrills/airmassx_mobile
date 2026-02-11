@@ -112,7 +112,8 @@ class AppRouter {
         builder: (context, state) {
           final tabStr = state.uri.queryParameters['tab'];
           final initialIndex = int.tryParse(tabStr ?? '0') ?? 0;
-          return MainScaffold(initialIndex: initialIndex);
+          final action = state.uri.queryParameters['action'];
+          return MainScaffold(initialIndex: initialIndex, initialAction: action);
         },
       ),
       GoRoute(
@@ -124,7 +125,8 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final initialTitle = extra?['title'] as String?;
-          return CreateTaskScreen(initialTitle: initialTitle);
+          final task = extra?['task'] as Task?;
+          return CreateTaskScreen(initialTitle: initialTitle, task: task);
         },
       ),
       GoRoute(

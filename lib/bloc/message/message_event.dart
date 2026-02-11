@@ -1,10 +1,6 @@
-import 'package:equatable/equatable.dart';
 
-abstract class MessageEvent extends Equatable {
- const MessageEvent();
-
-  @override
-  List<Object?> get props => [];
+abstract class MessageEvent {
+  const MessageEvent();
 }
 
 class LoadConversations extends MessageEvent {
@@ -13,11 +9,7 @@ class LoadConversations extends MessageEvent {
 
 class LoadMessages extends MessageEvent {
   final String conversationId;
-
-  const LoadMessages({required this.conversationId});
-
-  @override
-  List<Object?> get props => [conversationId];
+  const LoadMessages(this.conversationId);
 }
 
 class SendMessage extends MessageEvent {
@@ -30,25 +22,19 @@ class SendMessage extends MessageEvent {
     required this.receiverId,
     required this.content,
   });
-
-  @override
-  List<Object?> get props => [conversationId, receiverId, content];
 }
 
 class MarkAsRead extends MessageEvent {
   final String messageId;
-
-  const MarkAsRead({required this.messageId});
-
-  @override
-  List<Object?> get props => [messageId];
+  const MarkAsRead(this.messageId);
 }
 
 class MarkConversationAsRead extends MessageEvent {
   final String conversationId;
+  const MarkConversationAsRead(this.conversationId);
+}
 
-  const MarkConversationAsRead({required this.conversationId});
-
-  @override
-  List<Object?> get props => [conversationId];
+class ReceiveMessage extends MessageEvent {
+  final Map<String, dynamic> data;
+  const ReceiveMessage(this.data);
 }

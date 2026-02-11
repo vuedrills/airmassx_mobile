@@ -84,16 +84,22 @@ class TaskCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                              task.title,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.navy,
-                                height: 1.2,
+                            child: Hero(
+                              tag: 'task_title_${task.id}',
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: Text(
+                                  task.title,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.navy,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 60), // Space for status badge

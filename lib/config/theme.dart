@@ -47,8 +47,8 @@ class AppTheme {
   static const Color successLight = Color(0xFFE8EBF0); // Brand Navy Soft
   static const Color warning = Color(0xFFFFB400);
   static const Color warningLight = Color(0xFFFFF6E0);
-  static const Color error = Color(0xFFC13515);
-  static const Color errorLight = Color(0xFFFFEAE6);
+  static const Color error = Color(0xFFC04433); // Professional Muted Red
+  static const Color errorLight = Color(0xFFFFF1F0);
   static const Color info = Color(0xFF0077CC);
   static const Color infoLight = Color(0xFFE6F3FA);
 
@@ -465,15 +465,17 @@ class AppTheme {
 
       // SnackBar
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: neutral900,
+        backgroundColor: navy,
         contentTextStyle: GoogleFonts.nunitoSans(
           color: white,
           fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusSm),
+          borderRadius: BorderRadius.circular(radiusMd),
         ),
         behavior: SnackBarBehavior.floating,
+        elevation: 4,
       ),
 
       // Icon

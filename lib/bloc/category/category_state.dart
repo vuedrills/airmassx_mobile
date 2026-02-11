@@ -22,7 +22,7 @@ class CategoryLoaded extends CategoryState {
     categories.where((c) => c.type == 'service' && c.parentId == null).toList();
   
   List<Category> getEquipmentCategories() => 
-    categories.where((c) => c.type == 'equipment' && c.parentId == null).toList();
+    categories.where((c) => c.type.toLowerCase() == 'equipment' && c.parentId == null).toList();
     
   List<Category> getProfessionalCategories() => 
     categories.where((c) => c.tier.toLowerCase() == 'professional' && c.parentId == null).toList();

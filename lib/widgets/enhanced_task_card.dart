@@ -67,18 +67,27 @@ class EnhancedTaskCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      task.title,
-                      style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
+                    child: Hero(
+                      tag: 'task_title_${task.id}',
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Text(
+                          task.title,
+                          style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            height: 1.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  _PriceBadge(amount: task.budget),
+                  _PriceBadge(
+                    amount: task.budget,
+                    heroTag: 'task_price_${task.id}',
+                  ),
                 ],
               ),
               
@@ -267,11 +276,13 @@ class _StatusBadge extends StatelessWidget {
 
 class _PriceBadge extends StatelessWidget {
   final double amount;
-  const _PriceBadge({required this.amount});
+  final String? heroTag;
+  
+  const _PriceBadge({required this.amount, this.heroTag});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    Widget badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.primarySoft,
@@ -299,5 +310,17 @@ class _PriceBadge extends StatelessWidget {
         ],
       ),
     );
+
+    if (heroTag != null) {
+      return Hero(
+        tag: heroTag!,
+        child: Material(
+          type: MaterialType.transparency,
+          child: badge
+        ),
+      );
+    }
+    
+    return badge;
   }
 }

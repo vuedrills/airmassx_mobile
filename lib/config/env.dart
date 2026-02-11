@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 enum AppEnvironment {
@@ -31,9 +32,11 @@ class AppConfig {
          if (kIsWeb) {
           return 'http://localhost:8080/api/v1';
         }
-        // Android Emulator
-        // Note: checking specifically for android might be needed if not using localhost
-        return 'http://10.0.2.2:8080/api/v1'; 
+        if (Platform.isAndroid) {
+          return 'http://10.0.2.2:8080/api/v1';
+        }
+        // Use local IP for iOS Simulator/Device to avoid connection refused
+        return 'http://192.168.99.174:8080/api/v1'; 
     }
   }
   
@@ -47,7 +50,11 @@ class AppConfig {
          if (kIsWeb) {
           return 'http://localhost:8080';
         }
-        return 'http://10.0.2.2:8080'; 
+        if (Platform.isAndroid) {
+          return 'http://10.0.2.2:8080';
+        }
+        // Use local IP for iOS Simulator/Device
+        return 'http://192.168.99.174:8080'; 
     }
   }
 

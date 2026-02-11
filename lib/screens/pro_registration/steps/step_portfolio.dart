@@ -227,9 +227,11 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
     );
   }
 
+  // ... existing code ...
+
   Widget _buildAddButton(BuildContext context) {
     return InkWell(
-      onTap: _isUploading ? null : () => _pickAndUploadImages(context),
+      onTap: _isUploading ? null : () => _showAddOptions(context),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
@@ -245,7 +247,7 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.add_photo_alternate_outlined, 
+              Icons.add_link, 
               color: _isUploading ? AppTheme.neutral300 : AppTheme.primary, 
               size: 28,
             ),
@@ -264,7 +266,92 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
     );
   }
 
+  void _showAddOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image, color: AppTheme.primary),
+              title: const Text('Upload Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadImages(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.link, color: AppTheme.primary),
+              title: const Text('Add Link (GitHub, Portfolio, etc.)'),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddLinkDialog(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddLinkDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Portfolio Link'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'URL',
+            hintText: 'https://github.com/username',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.url,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final url = controller.text.trim();
+              if (url.isNotEmpty) {
+                final bloc = context.read<ProRegistrationBloc>();
+                final currentUrls = List<String>.from(bloc.state.portfolioUrls);
+                if (currentUrls.length < 10) {
+                  bloc.add(ProRegistrationPortfolioUpdated([...currentUrls, url]));
+                }
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPortfolioItem(BuildContext context, String url, int index) {
+    // Detect if URL is likely an image
+    bool isImage = url.contains('/uploads') || 
+                   url.endsWith('.jpg') || 
+                   url.endsWith('.jpeg') || 
+                   url.endsWith('.png') || 
+                   url.endsWith('.webp');
+
+    // Simple heuristic for external links vs uploaded files
+    if (!isImage && !url.startsWith('/')) {
+        return _buildLinkCard(context, url, index);
+    }
+    
+    // ... existing image rendering ...
     ImageProvider imageProvider;
     if (url.startsWith('http')) {
       imageProvider = NetworkImage(url);
@@ -288,23 +375,78 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
         Positioned(
           top: 4,
           right: 4,
-          child: GestureDetector(
-            onTap: _isUploading ? null : () {
-              final bloc = context.read<ProRegistrationBloc>();
-              final updatedUrls = List<String>.from(bloc.state.portfolioUrls)..removeAt(index);
-              bloc.add(ProRegistrationPortfolioUpdated(updatedUrls));
-            },
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.black54,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.close, color: Colors.white, size: 16),
-            ),
-          ),
+          child: _buildRemoveButton(context, index),
         ),
       ],
+    );
+  }
+
+  Widget _buildLinkCard(BuildContext context, String url, int index) {
+    IconData icon = Icons.link;
+    Color color = Colors.grey;
+    
+    if (url.contains('github.com')) {
+        icon = Icons.code; // GitHub substitute
+        color = Colors.black;
+    } else if (url.contains('behance.net')) {
+        icon = Icons.brush;
+        color = Colors.blue;
+    } else if (url.contains('dribbble.com')) {
+        icon = Icons.sports_basketball; // Dribbble substitute
+        color = Colors.pink;
+    } else if (url.contains('linkedin.com')) {
+        icon = Icons.work;
+        color = Colors.blue[800]!;
+    }
+
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.neutral100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.neutral200),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 32, color: color),
+              const SizedBox(height: 4),
+              Text(
+                url.replaceFirst(RegExp(r'https?://(www\.)?'), ''),
+                style: const TextStyle(fontSize: 10, color: AppTheme.neutral600),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: _buildRemoveButton(context, index),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRemoveButton(BuildContext context, int index) {
+    return GestureDetector(
+      onTap: _isUploading ? null : () {
+        final bloc = context.read<ProRegistrationBloc>();
+        final updatedUrls = List<String>.from(bloc.state.portfolioUrls)..removeAt(index);
+        bloc.add(ProRegistrationPortfolioUpdated(updatedUrls));
+      },
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: const BoxDecoration(
+          color: Colors.black54,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.close, color: Colors.white, size: 16),
+      ),
     );
   }
 
@@ -372,7 +514,7 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
     if (imagesToUpload.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maximum 10 photos allowed'), backgroundColor: Colors.orange),
+          const SnackBar(content: Text('Maximum 10 photos allowed')),
         );
       }
       return;
@@ -419,7 +561,6 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${uploadedUrls.length} of ${imagesToUpload.length} photos uploaded'),
-            backgroundColor: Colors.orange,
           ),
         );
       }

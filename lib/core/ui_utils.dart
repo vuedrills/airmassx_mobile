@@ -16,7 +16,7 @@ class UIUtils {
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: isError ? AppTheme.error : AppTheme.neutral900,
+        backgroundColor: AppTheme.navy,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),

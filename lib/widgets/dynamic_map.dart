@@ -19,6 +19,9 @@ class DynamicMarker {
   final double googleHue; // For Google (e.g. 0.0 for Red, 120.0 for Green)
   final VoidCallback? onTap;
   final String id;
+  final double width;
+  final double height;
+  final Alignment alignment;
 
   DynamicMarker({
     required this.point,
@@ -26,6 +29,9 @@ class DynamicMarker {
     this.child,
     this.googleHue = 0.0,
     this.onTap,
+    this.width = 25.0,
+    this.height = 25.0,
+    this.alignment = Alignment.center,
   });
 }
 
@@ -38,6 +44,7 @@ class DynamicMap extends StatefulWidget {
   final Function(google.GoogleMapController)? onGoogleMapCreated;
   final Function(latlong.LatLng)? onCameraMove;
   final MapProvider? forceProvider;
+  final String? tileUrl;
 
   const DynamicMap({
     super.key,
@@ -49,6 +56,7 @@ class DynamicMap extends StatefulWidget {
     this.onGoogleMapCreated,
     this.onCameraMove,
     this.forceProvider,
+    this.tileUrl,
   });
 
   @override
@@ -76,23 +84,23 @@ class _DynamicMapState extends State<DynamicMap> {
   }
 
   Future<google.BitmapDescriptor> _getCircleBitmap(Color color) async {
-    const double size = 28.0; // Reduced size to prevent clutter
+    const double size = 8.0; // Further reduced size
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     
     // Shadow
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.25)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
-    canvas.drawCircle(const Offset(size / 2, size / 2 + 0.8), size / 2 - 1.5, shadowPaint);
+      ..color = Colors.black.withOpacity(0.2)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
+    canvas.drawCircle(const Offset(size / 2, size / 2 + 0.2), size / 2 - 0.5, shadowPaint);
 
     // White border
     final whitePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 1.5, whitePaint);
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 0.5, whitePaint);
 
     // Inner color
     final paint = Paint()..color = color;
-    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 3.5, paint);
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 1.5, paint);
 
     final ui.Image image = await pictureRecorder.endRecording().toImage(size.toInt(), size.toInt());
     final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -158,7 +166,7 @@ class _DynamicMapState extends State<DynamicMap> {
             ),
             children: [
               osm.TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: widget.tileUrl ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.airmassxpress.mobile',
                 maxZoom: 19,
               ),
@@ -166,9 +174,9 @@ class _DynamicMapState extends State<DynamicMap> {
                 markers: widget.markers.map((m) {
                   return osm.Marker(
                     point: m.point,
-                    width: 120,
-                    height: 80,
-                    alignment: Alignment.center,
+                    width: m.width,
+                    height: m.height,
+                    alignment: m.alignment,
                     child: GestureDetector(
                       onTap: m.onTap,
                       child: m.child ?? Icon(

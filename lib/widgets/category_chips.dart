@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../bloc/browse/browse_bloc.dart';
 import '../bloc/browse/browse_event.dart';
 import '../bloc/browse/browse_state.dart';
@@ -7,15 +8,31 @@ import 'category_chip.dart';
 import '../models/category.dart';
 
 /// Horizontal scrolling category chips
-class CategoryChips extends StatelessWidget {
+class CategoryChips extends StatefulWidget {
   const CategoryChips({super.key});
+
+  @override
+  State<CategoryChips> createState() => _CategoryChipsState();
+}
+
+class _CategoryChipsState extends State<CategoryChips> {
+  BrowseLoaded? _lastLoadedState;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<BrowseBloc, BrowseState>(
       builder: (context, state) {
-        if (state is! BrowseLoaded) {
-          return const SizedBox.shrink();
+        // Cache the latest loaded state to prevent layout collapse/rebuilds during loading
+        if (state is BrowseLoaded) {
+          _lastLoadedState = state;
+        }
+
+        // Use current loaded state, or fallback to cached state if loading, 
+        // effectively ignoring the momentary 'BrowseLoading' state which causes the "pop"
+        final displayState = (state is BrowseLoaded) ? state : _lastLoadedState;
+
+        if (displayState == null) {
+          return const SizedBox(height: 26);
         }
 
         // Create 'All' category
@@ -29,10 +46,10 @@ class CategoryChips extends StatelessWidget {
           verificationLevel: 'basic',
         );
 
-        final filteredCategories = state.categories.where((c) {
-          bool matches = c.type == state.taskType && c.parentId == null;
-          if (state.tier != null && state.tier != 'all') {
-            matches = matches && c.tier == state.tier;
+        final filteredCategories = displayState.categories.where((c) {
+          bool matches = c.type == displayState.taskType && c.parentId == null;
+          if (displayState.tier != null && displayState.tier != 'all') {
+            matches = matches && c.tier == displayState.tier;
           }
           return matches;
         }).toList();
@@ -58,25 +75,37 @@ class CategoryChips extends StatelessWidget {
               final category = categories[index];
               
               String? displayName;
-              if (state.tier == 'project' && category.id != 'all') {
+              if (displayState.tier == 'project' && category.id != 'all') {
                 displayName = category.name.replaceAll(RegExp(r'\b(services|service)\b', caseSensitive: false), '').trim();
               }
 
               // If 'all' is selected (represented by null or empty/all in state), 
               // or if specific category matches
               final isSelected = category.id == 'all' 
-                  ? (state.selectedCategoryId == null || state.selectedCategoryId == 'all')
-                  : category.id == state.selectedCategoryId;
+                  ? (displayState.selectedCategoryId == 'all')
+                  : category.id == displayState.selectedCategoryId;
               
-              return CategoryChip(
-                category: category,
-                displayName: displayName,
-                isSelected: isSelected,
-                onTap: () {
-                  context.read<BrowseBloc>().add(SelectCategory(
-                    category.id == 'all' ? 'all' : category.id
-                  ));
-                },
+              return Animate(
+                // Use a stable key for 'All Posts' so it doesn't re-animate on tab changes
+                // This prevents the "pop pop" visual glitch for the anchor chip.
+                // For other chips, we want them to slide in when the tab data changes.
+                key: category.id == 'all' 
+                    ? const ValueKey('category_all') 
+                    : ValueKey('chip_${displayState.taskType}_${displayState.tier}_${category.id}'),
+                effects: [
+                  FadeEffect(duration: 400.ms, delay: (50 * index).ms),
+                  SlideEffect(begin: const Offset(0.1, 0), end: Offset.zero, curve: Curves.easeOutQuad, duration: 400.ms),
+                ],
+                child: CategoryChip(
+                  category: category,
+                  displayName: displayName,
+                  isSelected: isSelected,
+                  onTap: () {
+                    context.read<BrowseBloc>().add(SelectCategory(
+                      category.id == 'all' ? 'all' : category.id
+                    ));
+                  },
+                ),
               );
             },
           ),

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'package:get_it/get_it.dart';
 import '../services/api_service.dart';
+import '../config/env.dart';
 
 /// Service for handling WebSocket connections for realtime updates
 class RealtimeService {
@@ -37,18 +38,19 @@ class RealtimeService {
   Stream<Map<String, dynamic>> get walletUpdated => _walletUpdatedController.stream;
 
 
+  final _connectionStatusController = StreamController<bool>.broadcast();
+  Stream<bool> get connectionStatus => _connectionStatusController.stream;
+
   bool get isConnected => _isConnected;
 
+
   static String get _wsBaseUrl {
-    if (kIsWeb) {
-      return 'ws://localhost:8080/api/v1';
+    final apiUrl = AppConfig.shared.apiUrl;
+    if (apiUrl.startsWith('https')) {
+      return apiUrl.replaceFirst('https', 'wss');
+    } else {
+      return apiUrl.replaceFirst('http', 'ws');
     }
-    try {
-      if (Platform.isAndroid) {
-        return 'ws://10.0.2.2:8080/api/v1';
-      }
-    } catch (_) {}
-    return 'ws://localhost:8080/api/v1';
   }
 
   /// Connect to WebSocket with auth token
@@ -67,6 +69,7 @@ class RealtimeService {
       print('RealtimeService: Connecting to WebSocket...');
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       _isConnected = true;
+      _connectionStatusController.add(true);
       _resetReconnectCounter(); // Reset on successful connect
 
       // Listen for messages (non-blocking)
@@ -147,6 +150,7 @@ class RealtimeService {
   void _onError(Object error) {
     print('RealtimeService: WebSocket error: $error');
     _isConnected = false;
+    _connectionStatusController.add(false);
     
     // Check if it's a 401 error - we might need to refresh
     final errorStr = error.toString();
@@ -160,6 +164,7 @@ class RealtimeService {
   void _onDone() {
     print('RealtimeService: WebSocket connection closed');
     _isConnected = false;
+    _connectionStatusController.add(false);
     // Attempt to reconnect after a delay
     _scheduleReconnect();
   }
@@ -263,6 +268,7 @@ class RealtimeService {
   Future<void> disconnect() async {
     _reconnectTimer?.cancel();
     _isConnected = false;
+    _connectionStatusController.add(false);
     await _channel?.sink.close();
     _channel = null;
     _currentToken = null;
@@ -279,6 +285,7 @@ class RealtimeService {
     _messageReceivedController.close();
     _notificationController.close();
     _walletUpdatedController.close();
+    _connectionStatusController.close();
   }
 
 }

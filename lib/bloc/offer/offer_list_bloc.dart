@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'offer_list_event.dart';
 import 'offer_list_state.dart';
 import '../../services/api_service.dart';
+import '../../core/error_handler.dart';
 
 class OfferListBloc extends Bloc<OfferListEvent, OfferListState> {
   final ApiService _apiService;
@@ -17,7 +19,13 @@ class OfferListBloc extends Bloc<OfferListEvent, OfferListState> {
       final offers = await _apiService.getOffersForTask(event.taskId);
       emit(OfferListLoaded(offers: offers));
     } catch (e) {
-      emit(OfferListFailure(message: e.toString()));
+      String message;
+      if (e is ApiException) {
+        message = e.userFriendlyMessage;
+      } else {
+        message = ErrorHandler.getUserFriendlyMessage(e);
+      }
+      emit(OfferListFailure(message: message));
     }
   }
 
@@ -27,7 +35,7 @@ class OfferListBloc extends Bloc<OfferListEvent, OfferListState> {
 
     emit(OfferListLoading());
     try {
-      print('OfferListBloc: Accepting offer ${event.offerId} with method ${event.paymentMethod}');
+      debugPrint('OfferListBloc: Accepting offer ${event.offerId} with method ${event.paymentMethod}');
       await _apiService.acceptOffer(
         event.offerId, 
         event.taskId, 
@@ -38,14 +46,14 @@ class OfferListBloc extends Bloc<OfferListEvent, OfferListState> {
       final offers = await _apiService.getOffersForTask(event.taskId);
       emit(OfferListLoaded(offers: offers, message: 'Offer accepted successfully!'));
     } catch (e) {
-      print('OfferListBloc: Error accepting offer: $e');
-      String errorMessage;
+      debugPrint('OfferListBloc: Error accepting offer: $e');
+      String message;
       if (e is ApiException) {
-        errorMessage = e.userFriendlyMessage;
+        message = e.userFriendlyMessage;
       } else {
-        errorMessage = 'Something went wrong. Please try again.';
+        message = ErrorHandler.getUserFriendlyMessage(e);
       }
-      emit(OfferListFailure(message: errorMessage));
+      emit(OfferListFailure(message: message));
     }
   }
 }

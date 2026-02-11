@@ -7,6 +7,7 @@ import '../../config/theme.dart';
 import '../../models/wallet.dart';
 import '../../services/api_service.dart';
 import '../../services/realtime_service.dart';
+import '../../core/ui_utils.dart';
 import 'topup_screen.dart';
 import 'withdraw_screen.dart';
 
@@ -143,7 +144,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
                         centerTitle: false,
                         floating: true,
                         pinned: true,
-                        expandedHeight: 260,
+                        expandedHeight: 250,
                         flexibleSpace: FlexibleSpaceBar(
                           background: Container(
                             padding: const EdgeInsets.only(top: 105),
@@ -236,8 +237,8 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
 
   Widget _buildBalanceCard() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -308,12 +309,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
                   onTap: () async {
                     final balance = _wallet?.balance ?? 0.0;
                     if (balance < 5) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Minimum withdrawal is \$5.00'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
+                      UIUtils.showSnackBar(context, 'Minimum withdrawal is \$5.00', isError: true);
                       return;
                     }
                     final result = await Navigator.of(context).push<bool>(
@@ -690,13 +686,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
   }
 
   void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Coming soon!'),
-        backgroundColor: AppTheme.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    UIUtils.showSnackBar(context, 'Coming soon!');
   }
 }
 

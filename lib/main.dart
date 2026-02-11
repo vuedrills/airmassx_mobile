@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'config/theme.dart';
 import 'config/env.dart';
 import 'core/service_locator.dart';
@@ -41,7 +42,7 @@ import 'models/task.dart' as models;
 
 void main() async {
   // Initialize App Config (Default to DEV for now, can be swapped based on build flavor or flags later)
-  AppConfig.shared.initialize(env: AppEnvironment.prod);
+  AppConfig.shared.initialize(env: AppEnvironment.dev);
 
   await SentryFlutter.init(
     (options) {
@@ -160,7 +161,8 @@ class MyApp extends StatelessWidget {
 
 class MainScaffold extends StatefulWidget {
   final int initialIndex;
-  const MainScaffold({this.initialIndex = 0, super.key});
+  final String? initialAction;
+  const MainScaffold({this.initialIndex = 0, this.initialAction, super.key});
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
@@ -172,6 +174,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   StreamSubscription<Map<String, dynamic>>? _notificationSubscription;
   StreamSubscription<Map<String, dynamic>>? _messageSubscription;
   StreamSubscription<void>? _syncUnreadCountSubscription;
+  StreamSubscription<bool>? _connectionStatusSubscription;
   late final RealtimeService _realtimeService;
   
   // Unread counts for badge
@@ -192,6 +195,13 @@ class _MainScaffoldState extends State<MainScaffold> {
     
     // Load initial unread count
     _loadUnreadCount();
+
+    // Handle deep link actions
+    if (widget.initialAction == 'pro_registration') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.push('/profile/pro-registration');
+      });
+    }
   }
   
   Future<void> _loadUnreadCount() async {
@@ -214,6 +224,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     _notificationSubscription?.cancel();
     _messageSubscription?.cancel();
     _syncUnreadCountSubscription?.cancel();
+    _connectionStatusSubscription?.cancel();
     super.dispose();
   }
 
@@ -275,6 +286,18 @@ class _MainScaffoldState extends State<MainScaffold> {
     _syncUnreadCountSubscription = _realtimeService.syncUnreadCount.listen((_) {
       _loadUnreadCount();
     });
+
+    // Connection status listener commented out to remove intrusive snackbars as requested
+    /*
+    _connectionStatusSubscription = _realtimeService.connectionStatus.listen((isConnected) {
+      if (!mounted) return;
+      if (isConnected) {
+        _showNotificationSnackbar('Live Updates', 'Connected to Realtime Server', Icons.wifi, AppTheme.success);
+      } else {
+        _showNotificationSnackbar('Offline', 'Disconnected from Realtime Server', Icons.wifi_off, AppTheme.error);
+      }
+    });
+    */
   }
 
   void _showNotificationSnackbar(String title, String message, IconData icon, Color color) {

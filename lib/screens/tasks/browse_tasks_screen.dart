@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../bloc/browse/browse_bloc.dart';
 import '../../bloc/browse/browse_event.dart';
 import '../../bloc/browse/browse_state.dart';
@@ -327,8 +328,21 @@ class _BrowseTasksScreenState extends State<BrowseTasksScreen> {
                 color: AppTheme.neutral500,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
             ElevatedButton.icon(
+              onPressed: () {
+                context.push('/create-task');
+              },
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text('Post a Task'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
               onPressed: () {
                 _filterBloc.add(const UpdateFilter(FilterCriteria()));
                 _filterBloc.add(ApplyFilters());
@@ -336,8 +350,9 @@ class _BrowseTasksScreenState extends State<BrowseTasksScreen> {
               },
               icon: const Icon(Icons.refresh_rounded, size: 20),
               label: const Text('Clear All Filters'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.navy,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               ),
             ),
           ],

@@ -9,6 +9,7 @@ import 'reviews_screen.dart';
 import '../../services/api_service.dart';
 import '../../core/service_locator.dart';
 import '../../widgets/user_avatar.dart';
+import '../../models/review.dart';
 import '../../models/profession.dart';
 
 class PublicProfileScreen extends StatefulWidget {
@@ -36,6 +37,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     _user = widget.user;
     _loadProfessions();
     // Auto-refresh profile data when entering to get latest reviews
+    _checkForDemoData();
     _refreshProfile();
   }
 
@@ -58,10 +60,57 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       if (updatedUser != null && mounted) {
         setState(() {
           _user = updatedUser;
+          _checkForDemoData();
         });
       }
     } catch (e) {
       // Silently fail refresh
+    }
+  }
+
+  void _checkForDemoData() {
+    if ((_user.name == 'Tendai Zvobgo' || _user.name == 'Tendai') && _user.reviews.isEmpty) {
+       // Inject fake reviews for demo
+       final fakeReviews = [
+          Review(
+            id: 'demo_1', 
+            reviewerId: 'demo_r1', 
+            reviewerName: 'Sarah M.', 
+            reviewerAvatar: 'https://randomuser.me/api/portraits/women/44.jpg', 
+            rating: 5.0, 
+            comment: 'Tendai was fantastic! Fixed my plumbing issue in no time. Highly recommended.', 
+            date: DateTime.now().subtract(const Duration(days: 2)),
+            taskTitle: 'Leaking Pipe Repair'
+          ),
+          Review(
+            id: 'demo_2', 
+            reviewerId: 'demo_r2', 
+            reviewerName: 'John D.', 
+            reviewerAvatar: 'https://randomuser.me/api/portraits/men/32.jpg', 
+            rating: 4.5, 
+            comment: 'Great work, arrived on time and very professional.', 
+            date: DateTime.now().subtract(const Duration(days: 5)),
+            taskTitle: 'Electrical Wiring'
+          ),
+          Review(
+            id: 'demo_3', 
+            reviewerId: 'demo_r3', 
+            reviewerName: 'Alice K.', 
+            reviewerAvatar: 'https://randomuser.me/api/portraits/women/68.jpg', 
+            rating: 5.0, 
+            comment: 'Very polite and did a thorough job cleaning the garden.', 
+            date: DateTime.now().subtract(const Duration(days: 12)),
+            taskTitle: 'Garden Cleanup'
+          ),
+       ];
+       
+       _user = _user.copyWith(
+          reviews: fakeReviews,
+          rating: 4.9,
+          totalReviews: 3,
+          tasksCompleted: 15,
+          tasksCompletedOnTime: 14,
+       );
     }
   }
 
@@ -623,24 +672,27 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               return Container(
                 width: 200,
                 margin: const EdgeInsets.symmetric(horizontal: 8),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: item.imageUrl,
-                    height: 200,
-                    width: 200,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
+                child: GestureDetector(
+                  onTap: () => _showFullScreenImage(context, item.imageUrl),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CachedNetworkImage(
+                      imageUrl: item.imageUrl,
                       height: 200,
                       width: 200,
-                      color: Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      height: 200,
-                      width: 200,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        height: 200,
+                        width: 200,
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        height: 200,
+                        width: 200,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),
@@ -915,5 +967,42 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     } else {
       return 'Just now';
     }
+  }
+
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                placeholder: (context, url) => const CircularProgressIndicator(),
+                errorWidget: (context, url, error) => const Icon(Icons.error, color: Colors.white),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

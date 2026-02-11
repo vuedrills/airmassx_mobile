@@ -385,29 +385,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             ),
             const SizedBox(height: 20),
 
-            // Divider
-            _buildPremiumDivider('Payment'),
-            const SizedBox(height: 12),
 
-            // Payment Section
-            _buildCompactOption(
-              context,
-              title: 'Payment Settings',
-              subtitle: 'Manage your payment methods',
-              icon: Icons.payment,
-              accentColor: AppTheme.secondary,
-              onTap: () => context.push('/profile/payment-settings'),
-            ),
-            const SizedBox(height: 10),
-            _buildCompactOption(
-              context,
-              title: 'Payment History',
-              subtitle: 'View your transaction history',
-              icon: Icons.history,
-              accentColor: AppTheme.navy,
-              onTap: () => context.push('/profile/payment-history'),
-            ),
-            const SizedBox(height: 20),
 
             // Divider
             _buildPremiumDivider('Settings'),
@@ -439,10 +417,43 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               icon: Icons.info_outline,
               accentColor: AppTheme.neutral500,
               onTap: () {
-                showAboutDialog(
+                showDialog(
                   context: context,
-                  applicationName: 'Airmass Xpress',
-                  applicationVersion: '1.0.0',
+                  builder: (context) => AlertDialog(
+                    title: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, color: AppTheme.navy),
+                        SizedBox(width: 8),
+                        Text('About Airmass Xpress'),
+                      ],
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                         Image.asset('assets/images/logo.png', height: 64),
+                         const SizedBox(height: 16),
+                         const Text(
+                           'Airmass Xpress',
+                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.navy),
+                         ),
+                         const SizedBox(height: 4),
+                         const Text('Version 1.0.0', style: TextStyle(color: AppTheme.textSecondary)),
+                         const SizedBox(height: 16),
+                         const Text(
+                           '© 2025 Airmass Solutions. All rights reserved.',
+                           textAlign: TextAlign.center,
+                           style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                         ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -953,32 +964,53 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Widget _buildLogoutCard(BuildContext context) {
     return InkWell(
-      onTap: () => context.read<AuthBloc>().add(AuthLogout()),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Log Out'),
+            content: const Text('Are you sure you want to log out?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<AuthBloc>().add(AuthLogout());
+                },
+                child: const Text('Log Out', style: TextStyle(color: AppTheme.accentRed)),
+              ),
+            ],
+          ),
+        );
+      },
       borderRadius: BorderRadius.circular(14),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: AppTheme.accentRed.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.accentRed.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(color: AppTheme.accentRed.withOpacity(0.1)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.accentRed.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(Icons.logout_rounded, color: AppTheme.accentRed, size: 20),
-            ),
-            const SizedBox(width: 14),
+            Icon(Icons.logout_rounded, color: AppTheme.accentRed, size: 20),
+            const SizedBox(width: 8),
             Text(
-              'Log out',
-              style: TextStyle(
-                fontSize: 15,
+              'Log Out',
+              style: GoogleFonts.nunitoSans(
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.accentRed,
               ),

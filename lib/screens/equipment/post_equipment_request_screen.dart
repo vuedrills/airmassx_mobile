@@ -97,7 +97,6 @@ class _PostEquipmentRequestContentState extends State<_PostEquipmentRequestConte
                   Text('Equipment request posted!'),
                 ],
               ),
-              backgroundColor: Colors.green.shade600,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
@@ -106,7 +105,6 @@ class _PostEquipmentRequestContentState extends State<_PostEquipmentRequestConte
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage ?? 'Failed to post request'),
-              backgroundColor: Colors.red.shade600,
               behavior: SnackBarBehavior.floating,
             ),
           );

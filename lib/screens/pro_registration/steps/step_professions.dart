@@ -8,6 +8,7 @@ import '../../../bloc/pro_registration/pro_registration_state.dart';
 import '../../../config/theme.dart';
 
 import '../../../bloc/category/category_bloc.dart';
+import '../../../bloc/category/category_event.dart';
 import '../../../bloc/category/category_state.dart';
 
 class StepProfessions extends StatefulWidget {
@@ -58,6 +59,12 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
     });
 
     _animationController.forward();
+    
+    // Trigger category load if not already loaded
+    final categoryBloc = context.read<CategoryBloc>();
+    if (categoryBloc.state is CategoryInitial) {
+      categoryBloc.add(const LoadCategories());
+    }
   }
 
   @override
@@ -136,13 +143,19 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
 
                     BlocBuilder<CategoryBloc, CategoryState>(
                       builder: (context, catState) {
-                        if (catState is CategoryLoading) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (catState is CategoryInitial || catState is CategoryLoading) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
                         }
                         if (catState is CategoryLoaded) {
                           final categoriesGrouped = {
                             'Trades & Artisanal': catState.getArtisanalCategories(),
                             'Professional Services': catState.getProfessionalCategories(),
+                            'Equipment Hire': catState.getEquipmentCategories(),
                           };
 
                           return Column(
@@ -164,7 +177,22 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
                             }).toList(),
                           );
                         }
-                        return const Center(child: Text('Failed to load categories'));
+                        if (catState is CategoryError) {
+                          return Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Error: ${catState.message}', textAlign: TextAlign.center),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: () => context.read<CategoryBloc>().add(LoadCategories(forceRefresh: true)),
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return const Center(child: Text('Unexpected state. Please try again.'));
                       },
                     ),
                     const SizedBox(height: 40),

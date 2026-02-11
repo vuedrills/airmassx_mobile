@@ -64,6 +64,7 @@ class ProRegistrationScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => ProRegistrationBloc(
         getIt<ApiService>(),
+        initialProfile: profileState is ProfileLoaded ? profileState.profile : null,
         existingName: name,
         existingPhone: phone,
         existingBio: bio,
@@ -141,7 +142,6 @@ class _ProRegistrationViewState extends State<_ProRegistrationView> with TickerP
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage ?? 'Submission failed'),
-              backgroundColor: Colors.red,
             ),
           );
         }
@@ -182,6 +182,7 @@ class _ProRegistrationViewState extends State<_ProRegistrationView> with TickerP
                           layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
                             return Stack(
                               alignment: Alignment.topCenter,
+                              fit: StackFit.expand,
                               children: <Widget>[
                                 ...previousChildren,
                                 if (currentChild != null) currentChild,

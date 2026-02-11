@@ -30,6 +30,8 @@ class BrowseLoaded extends BrowseState {
   final bool isMapView;
   final String? taskType;
   final String? tier;
+  final bool hasReachedMax;
+  final int page;
 
 
   const BrowseLoaded({
@@ -41,6 +43,8 @@ class BrowseLoaded extends BrowseState {
     this.isMapView = false,
     this.taskType,
     this.tier,
+    this.hasReachedMax = false,
+    this.page = 0,
   });
 
   BrowseLoaded copyWith({
@@ -51,6 +55,9 @@ class BrowseLoaded extends BrowseState {
     SortOption? sortOption,
     bool? isMapView,
     String? taskType,
+    String? tier,
+    bool? hasReachedMax,
+    int? page,
   }) {
     return BrowseLoaded(
       tasks: tasks ?? this.tasks,
@@ -61,11 +68,13 @@ class BrowseLoaded extends BrowseState {
       isMapView: isMapView ?? this.isMapView,
       taskType: taskType ?? this.taskType,
       tier: tier ?? this.tier,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      page: page ?? this.page,
     );
   }
 
   @override
-  List<Object?> get props => [tasks, categories, ads, selectedCategoryId, sortOption, isMapView, taskType, tier];
+  List<Object?> get props => [tasks, categories, ads, selectedCategoryId, sortOption, isMapView, taskType, tier, hasReachedMax, page];
 }
 
 /// Error state

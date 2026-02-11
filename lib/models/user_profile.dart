@@ -27,8 +27,11 @@ class UserProfile extends Equatable {
   // Address info
   final String? address;
   final String? city;
+  final String? suburb;
   final String? country;
   final String? postcode;
+  final double? latitude;
+  final double? longitude;
   final DateTime? dateOfBirth;
   
   // New fields
@@ -55,8 +58,11 @@ class UserProfile extends Equatable {
     this.company,
     this.address,
     this.city,
+    this.suburb,
     this.country,
     this.postcode,
+    this.latitude,
+    this.longitude,
     this.dateOfBirth,
     this.taskerProfile,
     this.badges = const [],
@@ -82,8 +88,11 @@ class UserProfile extends Equatable {
     String? company,
     String? address,
     String? city,
+    String? suburb,
     String? country,
     String? postcode,
+    double? latitude,
+    double? longitude,
     DateTime? dateOfBirth,
     TaskerProfile? taskerProfile,
     List<UserBadge>? badges,
@@ -108,8 +117,11 @@ class UserProfile extends Equatable {
       company: company ?? this.company,
       address: address ?? this.address,
       city: city ?? this.city,
+      suburb: suburb ?? this.suburb,
       country: country ?? this.country,
       postcode: postcode ?? this.postcode,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       taskerProfile: taskerProfile ?? this.taskerProfile,
       badges: badges ?? this.badges,
@@ -137,8 +149,11 @@ class UserProfile extends Equatable {
       'company': company,
       'address': address,
       'city': city,
+      'suburb': suburb,
       'country': country,
       'postcode': postcode,
+      'latitude': latitude,
+      'longitude': longitude,
       'dateOfBirth': dateOfBirth?.toIso8601String(),
     };
   }
@@ -164,8 +179,11 @@ class UserProfile extends Equatable {
       company: json['company'] as String?,
       address: json['address'] as String?,
       city: json['city'] as String?,
+      suburb: json['suburb'] as String?,
       country: json['country'] as String?,
       postcode: json['postcode'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       dateOfBirth: (json['date_of_birth'] ?? json['dateOfBirth']) != null
           ? DateTime.parse((json['date_of_birth'] ?? json['dateOfBirth']) as String)
           : null,
@@ -203,8 +221,11 @@ class UserProfile extends Equatable {
         company,
         address,
         city,
+        suburb,
         country,
         postcode,
+        latitude,
+        longitude,
         dateOfBirth,
         taskerProfile,
         badges,

@@ -41,6 +41,8 @@ import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final String taskId;
@@ -51,7 +53,8 @@ class TaskDetailScreen extends StatefulWidget {
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();
 }
 
-class _TaskDetailScreenState extends State<TaskDetailScreen> {
+class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   int _selectedTab = 0; // 0 for Offers, 1 for Questions
 
   late final OfferListBloc _offerListBloc;
@@ -69,6 +72,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {
+          _selectedTab = _tabController.index;
+        });
+      }
+    });
     context.read<TaskBloc>().add(TaskLoadById(widget.taskId));
     _offerListBloc = getIt<OfferListBloc>();
     _questionBloc = getIt<QuestionBloc>();
@@ -128,6 +139,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _offerListBloc.close();
     _questionBloc.close();
     _questionController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -140,49 +152,55 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         elevation: 0,
 
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_horiz, color: Colors.black),
-            onSelected: (value) {
-              if (value == 'report') {
-                 final state = context.read<TaskBloc>().state;
-                 if (state.selectedTask != null) {
-                   _showDisputeDialog(context, state.selectedTask!);
-                 }
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem<String>(
-                  value: 'notifications',
-                  child: Row(
-                    children: [
-                      Icon(Icons.notifications_outlined, color: Colors.black54),
-                      SizedBox(width: 12),
-                      Text('Notification settings'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'share',
-                  child: Row(
-                    children: [
-                      Icon(Icons.share_outlined, color: Colors.black54),
-                      SizedBox(width: 12),
-                      Text('Share task'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'report',
-                  child: Row(
-                    children: [
-                      Icon(Icons.report_problem_outlined, color: Colors.red),
-                      SizedBox(width: 12),
-                      Text('File Dispute', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ];
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              final isOwner = authState is AuthAuthenticated && 
+                             context.read<TaskBloc>().state.selectedTask?.posterId == authState.user.id;
+              
+              return PopupMenuButton<String>(
+                icon: const Icon(LucideIcons.moreHorizontal, color: Colors.black),
+                onSelected: (value) {
+                  if (value == 'report') {
+                     final state = context.read<TaskBloc>().state;
+                     if (state.selectedTask != null) {
+                       _showDisputeDialog(context, state.selectedTask!);
+                     }
+                  } else if (value == 'edit') {
+                    final state = context.read<TaskBloc>().state;
+                     if (state.selectedTask != null) {
+                       context.push('/create-task', extra: {
+                         'task': state.selectedTask,
+                       });
+                     }
+                  }
+                },
+                itemBuilder: (BuildContext context) {
+                  return [
+                    if (isOwner)
+                      const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(LucideIcons.edit3, color: Colors.black54, size: 20),
+                            SizedBox(width: 12),
+                            Text('Edit Task'),
+                          ],
+                        ),
+                      ),
+                    if (!isOwner)
+                      const PopupMenuItem<String>(
+                        value: 'report',
+                        child: Row(
+                          children: [
+                            Icon(LucideIcons.alertTriangle, color: Colors.red, size: 20),
+                            SizedBox(width: 12),
+                            Text('File Dispute', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                  ];
+                },
+              );
             },
           ),
         ],
@@ -216,7 +234,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(offerState.message!),
-                      backgroundColor: Colors.green,
                     ),
                   );
                 }
@@ -251,13 +268,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               const SizedBox(height: 12),
                             ],
                             // Title
-                            Text(
-                              task.title,
-                              style: GoogleFonts.oswald(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0E1638),
-                                height: 1.2,
+                            Hero(
+                              tag: 'task_title_${task.id}',
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: Text(
+                                  task.title,
+                                  style: GoogleFonts.oswald(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0E1638),
+                                    height: 1.2,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -306,7 +329,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     UserAvatar.fromUser(task.poster!, radius: 20, showBadge: false)
                                   else
                                     UserAvatar(
-                                      name: task.posterName ?? 'U',
+                                      name: (task.posterName?.isNotEmpty == true) ? task.posterName! : 'User',
                                       profileImage: task.posterImage,
                                       radius: 20,
                                       isVerified: task.posterVerified ?? false,
@@ -318,7 +341,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          task.posterName ?? 'User',
+                                          (task.posterName?.isNotEmpty == true) ? task.posterName! : 'User',
                                           style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
@@ -327,7 +350,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                           Row(
                                             children: [
                                               if ((task.posterRating ?? 0) > 0) ...[
-                                                const Icon(Icons.star, size: 22, color: Colors.amber),
+                                                const Icon(LucideIcons.star, size: 22, color: Colors.amber),
                                                 const SizedBox(width: 4),
                                                 Text(
                                                   task.posterRating!.toStringAsFixed(1),
@@ -362,7 +385,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                       ],
                                     ),
                                   ),
-                                  const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                                  const Icon(LucideIcons.chevronRight, color: Colors.grey, size: 20),
                                 ],
                               ),
                             ),
@@ -380,7 +403,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.location_on_outlined, color: AppTheme.primary, size: 20),
+                                  child: const Icon(LucideIcons.mapPin, color: AppTheme.primary, size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -398,7 +421,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   ),
                                 ),
                                 TextButton(
-                                  onPressed: () => _showLocationMap(context, task),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => TaskMapScreen(
+                                          initialTasks: const [], // Let it load all, or pass just this one
+                                          initialTask: task,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                   child: const Text('Map', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                                 ),
                               ],
@@ -414,7 +447,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.calendar_today_outlined, color: AppTheme.primary, size: 20),
+                                  child: const Icon(LucideIcons.calendar, color: AppTheme.primary, size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Column(
@@ -440,7 +473,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.access_time, color: AppTheme.primary, size: 20),
+                                  child: const Icon(LucideIcons.clock, color: AppTheme.primary, size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Column(
@@ -454,48 +487,54 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   ],
                                 ),
                                 const Spacer(),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primarySoft,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text(
-                                        'BUDGET',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black54,
-                                          letterSpacing: 0.5,
-                                        ),
+                                Hero(
+                                  tag: 'task_price_${task.id}',
+                                  child: Material(
+                                    type: MaterialType.transparency,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primarySoft,
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      Row(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(
-                                            '\$${task.budget.toStringAsFixed(0)}',
-                                            style: GoogleFonts.oswald(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w700,
-                                              color: AppTheme.primary,
+                                          const Text(
+                                            'BUDGET',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black54,
+                                              letterSpacing: 0.5,
                                             ),
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'USD',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppTheme.primary.withOpacity(0.7),
-                                            ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '\$${task.budget.toStringAsFixed(0)}',
+                                                style: GoogleFonts.oswald(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppTheme.primary,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'USD',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: AppTheme.primary.withOpacity(0.7),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -627,72 +666,42 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                      child: Container(
                        decoration: BoxDecoration(
-                         color: const Color(0xFFF6F8FD),
-                         borderRadius: BorderRadius.circular(24),
-                         border: Border.all(color: AppTheme.primary, width: 1.5),
+                         color: AppTheme.neutral100,
+                         borderRadius: BorderRadius.circular(12),
                        ),
-                       child: Row(
-                         children: [
-                           Expanded(
-                             child: GestureDetector(
-                               onTap: () => setState(() => _selectedTab = 0),
-                               child: AnimatedContainer(
-                                 duration: const Duration(milliseconds: 200),
-                                 padding: const EdgeInsets.symmetric(vertical: 12),
-                                 decoration: BoxDecoration(
-                                   color: _selectedTab == 0 ? AppTheme.primary : Colors.transparent,
-                                   borderRadius: BorderRadius.circular(24),
-                                 ),
-                                 child: Center(
-                                   child: BlocBuilder<OfferListBloc, OfferListState>(
-                                     bloc: _offerListBloc,
-                                     builder: (context, offerState) {
-                                       final count = offerState is OfferListLoaded 
-                                           ? offerState.offers.length 
-                                           : task.offersCount;
-                                       return Text(
-                                         'Bids  $count',
-                                         style: TextStyle(
-                                           color: _selectedTab == 0 ? Colors.white : AppTheme.textPrimary,
-                                           fontWeight: FontWeight.w600,
-                                           fontSize: 14,
-                                         ),
-                                       );
-                                     },
-                                   ),
-                                 ),
-                               ),
+                       child: TabBar(
+                         controller: _tabController,
+                         indicator: BoxDecoration(
+                           color: AppTheme.primary,
+                           borderRadius: BorderRadius.circular(12),
+                         ),
+                         splashBorderRadius: BorderRadius.circular(12),
+                         labelColor: Colors.white,
+                         unselectedLabelColor: AppTheme.neutral600,
+                         labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                         indicatorSize: TabBarIndicatorSize.tab,
+                         dividerColor: Colors.transparent,
+                         tabs: [
+                           Tab(
+                             child: BlocBuilder<OfferListBloc, OfferListState>(
+                               bloc: _offerListBloc,
+                               builder: (context, offerState) {
+                                 final count = offerState is OfferListLoaded 
+                                     ? offerState.offers.length 
+                                     : task.offersCount;
+                                 return Text('Bids  $count');
+                               },
                              ),
                            ),
-                           Expanded(
-                             child: GestureDetector(
-                               onTap: () => setState(() => _selectedTab = 1),
-                               child: AnimatedContainer(
-                                 duration: const Duration(milliseconds: 200),
-                                 padding: const EdgeInsets.symmetric(vertical: 12),
-                                 decoration: BoxDecoration(
-                                   color: _selectedTab == 1 ? AppTheme.primary : Colors.transparent,
-                                   borderRadius: BorderRadius.circular(24),
-                                 ),
-                                 child: Center(
-                                   child: BlocBuilder<QuestionBloc, QuestionState>(
-                                     bloc: _questionBloc,
-                                     builder: (context, questionState) {
-                                       final count = questionState is QuestionsLoaded
-                                           ? questionState.questions.length
-                                           : task.questionsCount;
-                                       return Text(
-                                         'Questions  $count',
-                                         style: TextStyle(
-                                           color: _selectedTab == 1 ? Colors.white : AppTheme.textPrimary,
-                                           fontWeight: FontWeight.w600,
-                                           fontSize: 14,
-                                         ),
-                                       );
-                                     },
-                                   ),
-                                 ),
-                               ),
+                           Tab(
+                             child: BlocBuilder<QuestionBloc, QuestionState>(
+                               bloc: _questionBloc,
+                               builder: (context, questionState) {
+                                 final count = questionState is QuestionsLoaded
+                                     ? questionState.questions.length
+                                     : task.questionsCount;
+                                 return Text('Questions  $count');
+                               },
                              ),
                            ),
                          ],
@@ -778,7 +787,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
                     
                   const SizedBox(height: 100), // Extra space for sticky button
-                ],
+                ].animate(interval: 50.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOutQuad),
               ),
             ),
             bottomNavigationBar: _buildActionCard(context, task),
@@ -914,12 +923,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 value: task.siteReadiness!,
                 color: Colors.indigo,
               ),
-            _SpecPill(
-              icon: Icons.visibility,
-              label: 'Site Visit',
-              value: task.requiresSiteVisit ? 'Required' : 'Not Required',
-              color: task.requiresSiteVisit ? Colors.orange : Colors.grey,
-            ),
             if (task.timelineEnd != null)
               _SpecPill(
                 icon: Icons.event_available,
@@ -1071,7 +1074,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 elevation: 0,
               ),
               child: const Text(
-                'Make offer',
+                'Place a Bid',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
@@ -1271,7 +1274,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Dispute submitted successfully. Support will contact you.'),
-                  backgroundColor: AppTheme.success,
                 ),
               );
               // Refresh task
@@ -1282,7 +1284,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Failed to submit dispute: ${e.toString()}'),
-                  backgroundColor: Colors.red,
                 ),
               );
             }
@@ -2119,7 +2120,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 child: DynamicMap(
-                  forceProvider: MapProvider.osm,
                   initialCenter: taskLocation,
                   initialZoom: 15,
                   markers: [
@@ -2127,6 +2127,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       id: 'task_location',
                       point: taskLocation,
                       googleHue: 0.0,
+                      width: 100, // Sufficient width for budget badge
+                      height: 80, // Sufficient height for badge + icon
+                      alignment: Alignment.topCenter,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -2297,7 +2300,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         content: Text(
           isInsufficientBalance 
             ? 'You do not have enough funds in your wallet to cover the task budget. Please top up to continue.'
-            : 'Something went wrong while accepting the bid: $message',
+            : message,
           style: const TextStyle(fontSize: 15, height: 1.4),
         ),
         actions: [

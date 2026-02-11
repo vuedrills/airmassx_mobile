@@ -97,15 +97,15 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     _taglineController.forward();
 
-    // Give some time for AuthLoadUser to complete
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Give some time for AuthLoadUser to complete and for the user to see the logo
+    await Future.delayed(const Duration(milliseconds: 2000));
 
     if (mounted) {
       final authState = context.read<AuthBloc>().state;
       if (authState is AuthAuthenticated) {
-        context.go('/welcome');
+        context.go('/home'); // Go directly to home if authenticated
       } else {
-        context.go('/login');
+        context.go('/welcome'); // Go to welcome screen if not authenticated
       }
     }
   }

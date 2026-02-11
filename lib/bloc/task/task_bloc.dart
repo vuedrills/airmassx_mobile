@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/error_handler.dart';
 import '../../models/task.dart';
 import '../../services/api_service.dart';
 import 'task_event.dart';
@@ -39,7 +40,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       final activeTasks = await _apiService.getActiveTasks();
       emit(state.copyWith(activeTasks: activeTasks, isLoading: false, error: null));
     } catch (e) {
-      emit(state.copyWith(isLoading: false, error: 'Failed to load active tasks: ${e.toString()}'));
+      emit(state.copyWith(isLoading: false, error: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -65,7 +66,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     } catch (e) {
       emit(state.copyWith(
         isCompleting: false, 
-        error: 'Failed to complete task: ${e.toString()}',
+        error: ErrorHandler.getUserFriendlyMessage(e),
       ));
     }
   }
@@ -80,7 +81,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       final tasks = await _apiService.getTasks(taskType: 'service');
       emit(state.copyWith(tasks: tasks, isLoading: false, error: null));
     } catch (e) {
-      emit(state.copyWith(isLoading: false, error: 'Failed to load tasks: ${e.toString()}'));
+      emit(state.copyWith(isLoading: false, error: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -103,7 +104,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       final allTasks = await _apiService.getTasks(posterId: currentUserId);
       emit(state.copyWith(myTasks: allTasks, isLoading: false, error: null));
     } catch (e) {
-      emit(state.copyWith(isLoading: false, error: 'Failed to load my tasks: ${e.toString()}'));
+      emit(state.copyWith(isLoading: false, error: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -143,7 +144,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       
       emit(state.copyWith(tasks: filteredTasks, isLoading: false, error: null));
     } catch (e) {
-      emit(state.copyWith(isLoading: false, error: 'Failed to filter tasks: ${e.toString()}'));
+      emit(state.copyWith(isLoading: false, error: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -160,7 +161,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         emit(state.copyWith(isLoading: false, error: 'Task not found'));
       }
     } catch (e) {
-      emit(state.copyWith(isLoading: false, error: 'Failed to load task: ${e.toString()}'));
+      emit(state.copyWith(isLoading: false, error: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }
