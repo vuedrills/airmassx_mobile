@@ -486,8 +486,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           labelColor: AppTheme.navy,
           unselectedLabelColor: AppTheme.neutral400,
           dividerColor: Colors.transparent,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.1),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, letterSpacing: 0.1),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
           labelPadding: EdgeInsets.zero,
           tabs: const [
             Tab(text: 'Trades', height: 38),
