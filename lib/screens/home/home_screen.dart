@@ -427,6 +427,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           ],
         ),
       ),
+      /*
+      // Premium Segmented Tabs (Commented out for later)
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: Container(
@@ -469,6 +471,30 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               Tab(text: 'Projects', height: 40),
             ],
           ),
+        ),
+      ),
+      */
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(42),
+        child: TabBar(
+          controller: _tabController,
+          isScrollable: false,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          indicatorColor: AppTheme.primary,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelColor: AppTheme.navy,
+          unselectedLabelColor: AppTheme.neutral400,
+          dividerColor: Colors.transparent,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.1),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          labelPadding: EdgeInsets.zero,
+          tabs: const [
+            Tab(text: 'Trades', height: 38),
+            Tab(text: 'Professional', height: 38),
+            Tab(text: 'Equipment', height: 38),
+            Tab(text: 'Contractors', height: 38),
+          ],
         ),
       ),
     );

@@ -187,6 +187,26 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                           ],
                         ),
                       ),
+                    const PopupMenuItem<String>(
+                      value: 'notifications',
+                      child: Row(
+                        children: [
+                          Icon(LucideIcons.bell, color: Colors.black54, size: 20),
+                          SizedBox(width: 12),
+                          Text('Notification settings'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          Icon(LucideIcons.share2, color: Colors.black54, size: 20),
+                          SizedBox(width: 12),
+                          Text('Share task'),
+                        ],
+                      ),
+                    ),
                     if (!isOwner)
                       const PopupMenuItem<String>(
                         value: 'report',
