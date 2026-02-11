@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -75,8 +76,8 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   void _nextPage() {
     if (_currentStep < _totalSteps - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutQuart,
       );
       setState(() => _currentStep++);
     }
@@ -85,8 +86,8 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   void _prevPage() {
     if (_currentStep > 0) {
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutQuart,
       );
       setState(() => _currentStep--);
     } else {
@@ -405,9 +406,11 @@ class _StepCategoryState extends State<_StepCategory> {
                   onPressed: state.categories.isNotEmpty ? widget.onNext : null,
                   child: const Text('Next'),
                 ),
-              ),
+              ).animate(target: state.categories.isNotEmpty ? 1 : 0)
+               .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+               .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
             ],
-          ),
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad),
         );
       },
     );
@@ -624,9 +627,11 @@ class _StepTitleState extends State<_StepTitle> {
                 onPressed: _isValid ? widget.onNext : null,
                 child: const Text('Next'),
               ),
-            ),
+            ).animate(target: _isValid ? 1 : 0)
+             .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+             .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
           ],
-        ),
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad),
       ),
     );
   }
@@ -781,9 +786,11 @@ class _StepDescriptionState extends State<_StepDescription> {
                   onPressed: isValid ? widget.onNext : null,
                   child: const Text('Next'),
                 ),
-              ),
+              ).animate(target: isValid ? 1 : 0)
+               .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+               .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
             ],
-          ),
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad),
         );
       },
     );
@@ -1002,9 +1009,11 @@ class _StepDecideWhen extends StatelessWidget {
                   ),
                   child: const Text('Continue'),
                 ),
-              ),
+              ).animate(target: canContinue ? 1 : 0)
+               .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+               .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
             ],
-          ),
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad),
         );
       },
     );
@@ -1161,10 +1170,12 @@ class _StepLocation extends StatelessWidget {
                   onPressed: state.location.isNotEmpty ? onNext : null,
                   child: const Text('Confirm Location'),
                 ),
-              ),
+              ).animate(target: state.location.isNotEmpty ? 1 : 0)
+               .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+                .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
             ),
           ],
-        );
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad);
       },
     );
   }
@@ -1279,9 +1290,11 @@ class _StepBudgetState extends State<_StepBudget> {
               onPressed: _controller.text.isNotEmpty ? widget.onNext : null,
               child: const Text('Next'),
             ),
-          ),
+          ).animate(target: _controller.text.isNotEmpty ? 1 : 0)
+           .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+           .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
         ],
-      ),
+      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad),
     );
   }
 }
@@ -1370,9 +1383,11 @@ class _StepPhotos extends StatelessWidget {
               title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () async {
                 Navigator.pop(sheetContext);
-                final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                if (image != null && context.mounted) {
-                  context.read<CreateTaskBloc>().add(CreateTaskPhotoAdded(image.path));
+                final List<XFile> images = await picker.pickMultiImage();
+                if (images.isNotEmpty && context.mounted) {
+                  for (var image in images) {
+                    context.read<CreateTaskBloc>().add(CreateTaskPhotoAdded(image.path));
+                  }
                 }
               },
             ),

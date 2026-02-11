@@ -217,11 +217,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     super.dispose();
   }
 
+  BrowseLoaded? _lastLoadedState;
+
   Widget _buildHomeContent(BuildContext context) {
     return BlocListener<BrowseBloc, BrowseState>(
       listener: (context, state) {
         if (state is BrowseLoaded) {
           _saveCategoryToPrefs(state.selectedCategoryId);
+          setState(() {
+            _lastLoadedState = state;
+          });
         }
       },
       child: RefreshIndicator(
@@ -266,27 +271,44 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               ),
             ),
 
-            // Feature Carousel (Always shown when loaded)
+            // Feature Carousel & Task List / Empty State
             BlocBuilder<BrowseBloc, BrowseState>(
-              buildWhen: (previous, current) => current is BrowseLoaded || current is BrowseLoading,
               builder: (context, state) {
+                // Update last loaded state for stability
                 if (state is BrowseLoaded) {
-                  return SliverToBoxAdapter(
-                    child: FeatureCarousel(ads: state.ads)
-                        .animate()
-                        .fadeIn(delay: 300.ms)
-                        .scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1), curve: Curves.easeOutBack),
+                  _lastLoadedState = state;
+                }
+
+                // Determine if we should show the carousel
+                // Use cached ads and current tab index for immediate, non-flickering updates
+                Widget? carouselSliver;
+                final displayAds = (state is BrowseLoaded) ? state.ads : _lastLoadedState?.ads;
+                
+                if (displayAds != null) {
+                  carouselSliver = SliverToBoxAdapter(
+                    child: FeatureCarousel(
+                      ads: displayAds,
+                      tabIndex: _tabController.index,
+                    ),
+                  );
+                } else if (state is BrowseLoading || state is BrowseInitial) {
+                  // Only show placeholder if we have NO cached data at all (first load)
+                  carouselSliver = SliverToBoxAdapter(
+                    child: Container(
+                      height: 124,
+                      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   );
                 }
-                return const SliverToBoxAdapter(child: SizedBox.shrink());
-              },
-            ),
 
-            // Task List / Empty State
-            BlocBuilder<BrowseBloc, BrowseState>(
-              builder: (context, state) {
-                if (state is BrowseLoading) {
-                  return SliverPadding(
+                // Determine the task list or loading/error sliver
+                Widget contentSliver;
+                if (state is BrowseLoading || state is BrowseInitial) {
+                  contentSliver = SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
@@ -295,48 +317,43 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       ),
                     ),
                   );
-                }
-
-                if (state is BrowseLoaded) {
+                } else if (state is BrowseLoaded) {
                   if (state.tasks.isEmpty) {
-                    return SliverFillRemaining(
+                    contentSliver = SliverFillRemaining(
                       hasScrollBody: false,
                       child: _buildEmptyState(),
                     );
-                  }
+                  } else {
+                    contentSliver = SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final int taskCount = state.tasks.length;
+                            final bool hasAds = state.ads.isNotEmpty;
+                            final int adPosition = state.adsFrequency;
 
-                  return SliverPadding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final int taskCount = state.tasks.length;
-                          final bool hasAds = state.ads.isNotEmpty;
-                          final int adPosition = 3; // Inline ad after 3 tasks
+                            if (hasAds && index == adPosition && taskCount >= adPosition) {
+                              return _AdCarouselItem(ads: state.ads);
+                            }
 
-                          if (hasAds && index == adPosition && taskCount >= adPosition) {
-                            return _buildAdCarousel(state.ads);
-                          }
+                            final int taskIndex = (hasAds && index > adPosition) ? index - 1 : index;
 
-                          // Calculate task index
-                          final int taskIndex = (hasAds && index > adPosition) ? index - 1 : index;
-
-                          if (taskIndex < taskCount) {
-                            return TaskCard(task: state.tasks[taskIndex])
-                                .animate(delay: (100 * (index % 5)).ms)
-                                .fadeIn(duration: 400.ms)
-                                .slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuad);
-                          }
-                          return null;
-                        },
-                        childCount: state.tasks.length + (state.ads.isNotEmpty && state.tasks.length >= 3 ? 1 : 0),
+                            if (taskIndex < taskCount) {
+                              return TaskCard(task: state.tasks[taskIndex])
+                                  .animate(delay: (100 * (index % 5)).ms)
+                                  .fadeIn(duration: 400.ms)
+                                  .slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuad);
+                            }
+                            return null;
+                          },
+                          childCount: state.tasks.length + (state.ads.isNotEmpty && state.tasks.length >= state.adsFrequency ? 1 : 0),
+                        ),
                       ),
-                    ),
-                  );
-                }
-
-                if (state is BrowseError) {
-                  return SliverFillRemaining(
+                    );
+                  }
+                } else if (state is BrowseError) {
+                  contentSliver = SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
                       child: Column(
@@ -351,9 +368,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       ).animate().fadeIn(),
                     ),
                   );
+                } else {
+                  contentSliver = const SliverToBoxAdapter(child: SizedBox.shrink());
                 }
 
-                return const SliverToBoxAdapter(child: SizedBox.shrink());
+                return SliverMainAxisGroup(
+                  slivers: [
+                    if (carouselSliver != null) carouselSliver,
+                    contentSliver,
+                  ],
+                );
               },
             ),
             
@@ -395,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     
     return SliverAppBar(
       pinned: true,
-      floating: true,
+      floating: false,
       backgroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -927,32 +951,59 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       ),
     );
   }
+}
 
-  Widget _buildAdCarousel(List<Ad> ads) {
-    if (ads.isEmpty) return const SizedBox.shrink();
+class _AdCarouselItem extends StatefulWidget {
+  final List<Ad> ads;
+  const _AdCarouselItem({required this.ads});
 
-    // If only one ad, just show it
-    if (ads.length == 1) {
-      return SizedBox(
+  @override
+  State<_AdCarouselItem> createState() => _AdCarouselItemState();
+}
+
+class _AdCarouselItemState extends State<_AdCarouselItem> {
+  late PageController _pageController;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.96);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.ads.isEmpty) return const SizedBox.shrink();
+
+    if (widget.ads.length == 1) {
+      return Container(
         height: 160,
-        child: AdCard(ad: ads.first),
+        margin: const EdgeInsets.only(bottom: 12),
+        child: AdCard(ad: widget.ads.first),
       );
     }
 
-    return SizedBox(
-      height: 160, // Matches TaskCard height
+    return Container(
+      height: 160,
+      margin: const EdgeInsets.only(bottom: 12),
       child: Stack(
         children: [
           PageView.builder(
-            controller: PageController(viewportFraction: 0.96),
+            controller: _pageController,
             onPageChanged: (index) {
               setState(() {
-                _currentAdIndex = index;
+                _currentIndex = index;
               });
             },
-            itemCount: ads.length,
+            itemCount: widget.ads.length,
             itemBuilder: (context, index) {
-              return AdCard(ad: ads[index]);
+              return AdCard(ad: widget.ads[index]);
             },
           ),
           Positioned(
@@ -961,15 +1012,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
             right: 0,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(ads.length, (index) {
+              children: List.generate(widget.ads.length, (index) {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  width: _currentAdIndex == index ? 16 : 6,
+                  width: _currentIndex == index ? 16 : 6,
                   height: 4,
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
-                    color: _currentAdIndex == index 
+                    color: _currentIndex == index 
                         ? AppTheme.primary 
                         : AppTheme.neutral300,
                   ),

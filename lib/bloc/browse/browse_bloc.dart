@@ -90,11 +90,13 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         ),
         _apiService.getAds(),
         currentCategories.isEmpty ? _apiService.getCategories() : Future.value(currentCategories),
+        _apiService.getAdsFrequency(),
       ]);
 
       final tasks = results[0] as List<Task>;
       final ads = results[1] as List<Ad>;
       final categories = results[2] as List<Category>;
+      final adsFrequency = results[3] as int;
       
       emit(BrowseLoaded(
         tasks: tasks,
@@ -104,6 +106,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         isMapView: isMapView,
         taskType: currentTaskType,
         tier: currentTier,
+        adsFrequency: adsFrequency,
       ));
     } catch (e) {
       emit(BrowseError(ErrorHandler.getUserFriendlyMessage(e)));
@@ -133,6 +136,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         ),
         _apiService.getCategories(),
         _apiService.getAds(),
+        _apiService.getAdsFrequency(),
       ]);
       
       // Check if this request is still the latest one
@@ -143,6 +147,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
       final tasks = results[0] as List<Task>;
       final categories = results[1] as List<Category>;
       final ads = results[2] as List<Ad>;
+      final adsFrequency = results[3] as int;
 
       emit(BrowseLoaded(
         tasks: tasks,
@@ -150,6 +155,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         ads: ads,
         taskType: event.taskType,
         tier: event.tier,
+        adsFrequency: adsFrequency,
       ));
     } catch (e) {
       if (requestId == _currentRequestId) {

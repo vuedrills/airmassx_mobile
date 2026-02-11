@@ -65,7 +65,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final loc = _getTaskLocation(widget.initialTask!);
         if (loc != null) {
-           _animatedMapMove(loc, 13.5);
+           _animatedMapMove(loc, 15.0);
         }
       });
     }
@@ -98,9 +98,12 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
     setState(() => _isLoading = true);
     try {
       final apiService = getIt<ApiService>();
-      final tasks = widget.taskType != null
-          ? await apiService.getTasksWithFilter(taskType: widget.taskType)
-          : await apiService.getTasks();
+      // Fetch more tasks for the map view to ensure we see everything
+      final tasks = await apiService.getTasks(
+        taskType: widget.taskType,
+        limit: 100, 
+      );
+      
       setState(() {
         _tasks = tasks;
         _filteredTasks = _applyFilter(tasks);
@@ -192,10 +195,16 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
           final location = _getTaskLocation(task);
           if (location == null) return null;
           
-          final isEquipment = task.taskType == 'equipment' || 
+          final isEquipment = task.taskType.toLowerCase() == 'equipment' || 
                               task.category.toLowerCase().contains('equipment') ||
                               task.category.toLowerCase().contains('plant') ||
-                              task.category.toLowerCase().contains('machinery');
+                              task.category.toLowerCase().contains('machinery') ||
+                              task.costingBasis != null || 
+                              task.hireDurationType != null ||
+                              task.equipmentUnits != null ||
+                              // Common equipment categories
+                              ['excavator', 'loader', 'generator', 'tipper', 'tlb', 'roller'].contains(task.category.toLowerCase());
+                              
           final markerColor = isEquipment ? Colors.green : AppTheme.accentRed;
           final googleHue = isEquipment ? 120.0 : 0.0;
           
@@ -203,14 +212,16 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
             id: task.id,
             point: location,
             googleHue: googleHue,
+            width: 22,
+            height: 22,
             onTap: () {
                 setState(() {
                   _selectedTask = task;
                 });
             },
             child: Container(
-                width: 14,
-                height: 14,
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
                   color: markerColor,
                   shape: BoxShape.circle,
@@ -223,7 +234,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
                   ],
                   border: Border.all(
                     color: Colors.white,
-                    width: 1.5,
+                    width: 2.0,
                   ),
                 ),
             ),
@@ -268,6 +279,8 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
               initialZoom: 12,
               forceProvider: MapProvider.osm,
               tileUrl: _mapTileUrl,
+              showCircle: _selectedTask != null,
+              circleRadius: 400, // Show 400m radius
               onTap: (latLng) {
                   setState(() {
                     _selectedTask = null;

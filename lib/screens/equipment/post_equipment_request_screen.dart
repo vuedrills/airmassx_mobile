@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../bloc/create_task/create_task_bloc.dart';
@@ -63,8 +64,8 @@ class _PostEquipmentRequestContentState extends State<_PostEquipmentRequestConte
   void _nextPage() {
     if (_currentStep < _totalSteps - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutQuart,
       );
       setState(() => _currentStep++);
     }
@@ -73,8 +74,8 @@ class _PostEquipmentRequestContentState extends State<_PostEquipmentRequestConte
   void _prevPage() {
     if (_currentStep > 0) {
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutQuart,
       );
       setState(() => _currentStep--);
     } else {
@@ -538,9 +539,11 @@ class _StepMachineSpecsState extends State<_StepMachineSpecs> {
               label: 'Continue',
               onPressed: canContinue ? widget.onNext : null,
               isEnabled: canContinue,
-            ),
+            ).animate(target: canContinue ? 1 : 0)
+             .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+             .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
           ],
-        );
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad);
       },
     );
   }
@@ -582,9 +585,11 @@ class _StepLocation extends StatelessWidget {
               label: 'Continue',
               onPressed: hasValidLocation ? onNext : null,
               isEnabled: hasValidLocation,
-            ),
+            ).animate(target: hasValidLocation ? 1 : 0)
+             .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+             .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
           ],
-        );
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad);
       },
     );
   }
@@ -1015,9 +1020,11 @@ class _StepTimingBudgetState extends State<_StepTimingBudget> {
               label: 'Review Request',
               onPressed: canContinue ? widget.onNext : null,
               isEnabled: canContinue,
-            ),
+            ).animate(target: canContinue ? 1 : 0)
+             .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+             .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
           ],
-        );
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad);
       },
     );
   }
@@ -1315,9 +1322,11 @@ class _StepReview extends StatelessWidget {
               },
               isEnabled: !isSubmitting,
               isLoading: isSubmitting,
-            ),
+            ).animate(target: !isSubmitting ? 1 : 0)
+             .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
+             .shimmer(delay: 800.ms, duration: 1500.ms, color: Colors.white24),
           ],
-        );
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0, curve: Curves.easeOutQuad);
       },
     );
   }

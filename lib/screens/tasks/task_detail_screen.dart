@@ -151,79 +151,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
         backgroundColor: Colors.white,
         elevation: 0,
 
-        actions: [
-          BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, authState) {
-              final isOwner = authState is AuthAuthenticated && 
-                             context.read<TaskBloc>().state.selectedTask?.posterId == authState.user.id;
-              
-              return PopupMenuButton<String>(
-                icon: const Icon(LucideIcons.moreHorizontal, color: Colors.black),
-                onSelected: (value) {
-                  if (value == 'report') {
-                     final state = context.read<TaskBloc>().state;
-                     if (state.selectedTask != null) {
-                       _showDisputeDialog(context, state.selectedTask!);
-                     }
-                  } else if (value == 'edit') {
-                    final state = context.read<TaskBloc>().state;
-                     if (state.selectedTask != null) {
-                       context.push('/create-task', extra: {
-                         'task': state.selectedTask,
-                       });
-                     }
-                  }
-                },
-                itemBuilder: (BuildContext context) {
-                  return [
-                    if (isOwner)
-                      const PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(LucideIcons.edit3, color: Colors.black54, size: 20),
-                            SizedBox(width: 12),
-                            Text('Edit Task'),
-                          ],
-                        ),
-                      ),
-                    const PopupMenuItem<String>(
-                      value: 'notifications',
-                      child: Row(
-                        children: [
-                          Icon(LucideIcons.bell, color: Colors.black54, size: 20),
-                          SizedBox(width: 12),
-                          Text('Notification settings'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: 'share',
-                      child: Row(
-                        children: [
-                          Icon(LucideIcons.share2, color: Colors.black54, size: 20),
-                          SizedBox(width: 12),
-                          Text('Share task'),
-                        ],
-                      ),
-                    ),
-                    if (!isOwner)
-                      const PopupMenuItem<String>(
-                        value: 'report',
-                        child: Row(
-                          children: [
-                            Icon(LucideIcons.alertTriangle, color: Colors.red, size: 20),
-                            SizedBox(width: 12),
-                            Text('File Dispute', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                  ];
-                },
-              );
-            },
-          ),
-        ],
+        actions: const [],
       ),
       body: BlocBuilder<TaskBloc, TaskState>(
          builder: (context, state) {
@@ -288,19 +216,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                               const SizedBox(height: 12),
                             ],
                             // Title
-                            Hero(
-                              tag: 'task_title_${task.id}',
-                              child: Material(
-                                type: MaterialType.transparency,
-                                child: Text(
-                                  task.title,
-                                  style: GoogleFonts.oswald(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF0E1638),
-                                    height: 1.2,
-                                  ),
-                                ),
+                            Text(
+                              task.title,
+                              style: GoogleFonts.oswald(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0E1638),
+                                height: 1.2,
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -1375,28 +1297,50 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.visibility, color: AppTheme.primary, size: 24),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Publicly Visible',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.navy,
-                  ),
+          Row(
+            children: [
+              Icon(Icons.visibility, color: AppTheme.primary, size: 24),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Publicly Visible',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.navy,
+                      ),
+                    ),
+                    Text(
+                      'Awaiting bids from taskers',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Awaiting bids from taskers',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showCancelConfirmation(context, task),
+              icon: const Icon(LucideIcons.trash2, size: 18),
+              label: const Text('Cancel Task'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -2351,6 +2295,55 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       ),
     );
   }
+
+  void _showCancelConfirmation(BuildContext context, Task task) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel Task?'),
+        content: const Text(
+          'Are you sure you want to cancel this task? '
+          'All active bidders will be notified.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Keep Task'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Close the dialog
+              Navigator.pop(dialogContext);
+              
+              // Dispatch the cancel event
+              context.read<TaskBloc>().add(TaskCancel(task.id));
+              
+              // Navigate to home immediately
+              context.go('/');
+              
+              // Show success message after a short delay (on home screen)
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Task cancelled successfully'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cancel Task'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SpecPill extends StatelessWidget {
@@ -2408,4 +2401,6 @@ class _SpecPill extends StatelessWidget {
     );
   }
 }
+
+
 

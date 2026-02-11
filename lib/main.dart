@@ -41,8 +41,10 @@ import 'models/task.dart' as models;
 
 
 void main() async {
-  // Initialize App Config (Default to DEV for now, can be swapped based on build flavor or flags later)
-  AppConfig.shared.initialize(env: AppEnvironment.dev);
+  // Initialize App Config
+  AppConfig.shared.initialize(
+    env: kReleaseMode ? AppEnvironment.prod : AppEnvironment.dev
+  );
 
   await SentryFlutter.init(
     (options) {

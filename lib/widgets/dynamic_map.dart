@@ -45,6 +45,8 @@ class DynamicMap extends StatefulWidget {
   final Function(latlong.LatLng)? onCameraMove;
   final MapProvider? forceProvider;
   final String? tileUrl;
+  final bool showCircle;
+  final double circleRadius; // in meters
 
   const DynamicMap({
     super.key,
@@ -57,6 +59,8 @@ class DynamicMap extends StatefulWidget {
     this.onCameraMove,
     this.forceProvider,
     this.tileUrl,
+    this.showCircle = false,
+    this.circleRadius = 500,
   });
 
   @override
@@ -84,23 +88,29 @@ class _DynamicMapState extends State<DynamicMap> {
   }
 
   Future<google.BitmapDescriptor> _getCircleBitmap(Color color) async {
-    const double size = 8.0; // Further reduced size
+    const double size = 32.0; // Increased recording size for better resolution
+    const double displaySize = 12.0; // Desired display size in logical pixels
+    
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     
+    // Scale for high resolution
+    final double scale = size / displaySize;
+    canvas.scale(scale);
+
     // Shadow
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.2)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
-    canvas.drawCircle(const Offset(size / 2, size / 2 + 0.2), size / 2 - 0.5, shadowPaint);
+      ..color = Colors.black.withOpacity(0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.0);
+    canvas.drawCircle(const Offset(displaySize / 2, displaySize / 2 + 0.5), displaySize / 2 - 0.5, shadowPaint);
 
     // White border
     final whitePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 0.5, whitePaint);
+    canvas.drawCircle(const Offset(displaySize / 2, displaySize / 2), displaySize / 2 - 0.5, whitePaint);
 
     // Inner color
     final paint = Paint()..color = color;
-    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 1.5, paint);
+    canvas.drawCircle(const Offset(displaySize / 2, displaySize / 2), displaySize / 2 - 2.0, paint);
 
     final ui.Image image = await pictureRecorder.endRecording().toImage(size.toInt(), size.toInt());
     final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -155,6 +165,16 @@ class _DynamicMapState extends State<DynamicMap> {
             mapToolbarEnabled: false,
             compassEnabled: false,
             mapType: google.MapType.normal,
+            circles: widget.showCircle ? {
+              google.Circle(
+                circleId: const google.CircleId('task_radius'),
+                center: google.LatLng(widget.initialCenter.latitude, widget.initialCenter.longitude),
+                radius: widget.circleRadius,
+                fillColor: AppTheme.primary.withOpacity(0.1),
+                strokeColor: AppTheme.primary.withOpacity(0.4),
+                strokeWidth: 1,
+              ),
+            } : {},
           );
         } else {
           return osm.FlutterMap(
@@ -188,6 +208,19 @@ class _DynamicMapState extends State<DynamicMap> {
                   );
                 }).toList(),
               ),
+              if (widget.showCircle)
+                osm.CircleLayer(
+                  circles: [
+                    osm.CircleMarker(
+                      point: widget.initialCenter,
+                      radius: widget.circleRadius,
+                      useRadiusInMeter: true,
+                      color: AppTheme.primary.withOpacity(0.1),
+                      borderColor: AppTheme.primary.withOpacity(0.4),
+                      borderStrokeWidth: 1,
+                    ),
+                  ],
+                ),
             ],
           );
         }

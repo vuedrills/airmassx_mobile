@@ -14,6 +14,7 @@ import '../../services/api_service.dart';
 import '../core/service_locator.dart';
 import 'dynamic_map.dart';
 import '../bloc/map_settings/map_settings_cubit.dart';
+import '../utils/location_permission_helper.dart';
 
 /// Zimbabwe cities with coordinates
 class ZimbabweCity {
@@ -462,21 +463,10 @@ class _EnhancedLocationPickerState extends State<EnhancedLocationPicker> {
   }
 
   Future<void> _useCurrentLocation() async {
-    // Check permission status
-    LocationPermission permission = await Geolocator.checkPermission();
+    // Check permission status via helper
+    final permission = await LocationPermissionHelper.checkAndRequestPermission(context);
     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-       // Show disclaimer dialog
-       final bool? accepted = await showDialog<bool>(
-         context: context, 
-         builder: (_) => const LocationDisclaimerDialog()
-       );
-       if (accepted != true) return; // User cancelled/denied
-       
-       // Request permission
-       permission = await Geolocator.requestPermission();
-       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-          return;
-       }
+       return;
     }
 
     setState(() => _isLocating = true);

@@ -363,6 +363,10 @@ class GeocodingService {
   }
 
   /// Get current device location
+  /// 
+  /// Returns null if location services are disabled or permission is denied.
+  /// NOTE: This method does NOT request permission. The UI must ensure permission
+  /// is granted (using LocationPermissionHelper) before calling this.
   Future<Position?> getCurrentLocation() async {
     try {
       // Check if location services are enabled
@@ -372,14 +376,12 @@ class GeocodingService {
         return null;
       }
 
-      // Check permission
+      // Check permission status ONLY - do not request
       LocationPermission permission = await Geolocator.checkPermission();
+      
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          print('Location permission denied');
-          return null;
-        }
+        print('Location permission denied (not requested)');
+        return null;
       }
 
       if (permission == LocationPermission.deniedForever) {

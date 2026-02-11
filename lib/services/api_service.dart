@@ -1692,6 +1692,17 @@ class ApiService {
       return true;
     }
   }
+
+  /// Get ads frequency (number of tasks between ads)
+  Future<int> getAdsFrequency() async {
+    try {
+      final data = await _get('/settings/ads-frequency');
+      return data['frequency'] ?? 3;
+    } catch (e) {
+      debugPrint('Error fetching ads frequency: $e');
+      return 3;
+    }
+  }
 }
 
 

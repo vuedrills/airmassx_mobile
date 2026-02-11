@@ -11,6 +11,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as google;
 import 'dynamic_map.dart';
 import '../bloc/map_settings/map_settings_cubit.dart';
+import '../utils/location_permission_helper.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Result object returned by GpsFirstLocationPicker
 class GpsFirstLocationResult {
@@ -295,6 +297,12 @@ class _GpsFirstLocationPickerState extends State<GpsFirstLocationPicker> {
   }
 
   Future<void> _useCurrentLocation() async {
+    // Check permission first
+    final permission = await LocationPermissionHelper.checkAndRequestPermission(context);
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+       return; 
+    }
+
     setState(() => _isLocating = true);
     
     final position = await _geocodingService.getCurrentLocation();

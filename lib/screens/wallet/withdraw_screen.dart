@@ -115,7 +115,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           children: [
             Icon(LucideIcons.checkCircle, color: Colors.green),
             const SizedBox(width: 12),
-            const Text('Request Submitted'),
+            const Text('Withdrawal Processed'),
           ],
         ),
         content: Column(
@@ -123,7 +123,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Your withdrawal request has been submitted successfully.',
+              'Your withdrawal has been processed successfully!',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -147,7 +147,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Processing time: 24-48 hours',
+              'Funds will be transferred to your account shortly.',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -464,7 +464,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                           ),
                         )
                       : const Text(
-                          'Request Withdrawal',
+                          'Withdraw Funds',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -480,18 +480,18 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
+                  color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade200),
+                  border: Border.all(color: Colors.green.shade200),
                 ),
                 child: Row(
                   children: [
-                    Icon(LucideIcons.info, color: Colors.amber.shade700, size: 18),
+                    Icon(LucideIcons.info, color: Colors.green.shade700, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Withdrawals are processed within 24-48 hours during business days.',
-                        style: TextStyle(color: Colors.amber.shade900, fontSize: 12),
+                        'Withdrawals are processed instantly. Funds will be sent to your mobile money account shortly.',
+                        style: TextStyle(color: Colors.green.shade900, fontSize: 12),
                       ),
                     ),
                   ],

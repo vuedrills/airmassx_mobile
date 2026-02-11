@@ -20,7 +20,7 @@ class LocationDisclaimerDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Airmass Xpress collects location data to enable the following features even when the app is closed or not in use:',
+              'Airmass Xpress collects location data to enable the following features when the app is in use:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),

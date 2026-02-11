@@ -15,6 +15,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     on<TaskLoadById>(_onLoadById);
     on<TaskApplyFilters>(_onApplyFilters);
     on<TaskComplete>(_onComplete);
+    on<TaskCancel>(_onCancel);
     on<TaskLoadPendingReviews>(_onLoadPendingReviews);
   }
 
@@ -159,6 +160,27 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         emit(state.copyWith(selectedTask: task, isLoading: false, error: null));
       } else {
         emit(state.copyWith(isLoading: false, error: 'Task not found'));
+      }
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: ErrorHandler.getUserFriendlyMessage(e)));
+    }
+  }
+  Future<void> _onCancel(
+    TaskCancel event,
+    Emitter<TaskState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await _apiService.deleteTask(event.taskId);
+      
+      // Refresh my tasks list
+      final currentUser = await _apiService.getCurrentUser();
+      final currentUserId = currentUser?.id ?? '';
+      if (currentUserId.isNotEmpty) {
+        final myTasks = await _apiService.getTasks(posterId: currentUserId);
+        emit(state.copyWith(myTasks: myTasks, isLoading: false, error: null));
+      } else {
+        emit(state.copyWith(isLoading: false));
       }
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: ErrorHandler.getUserFriendlyMessage(e)));

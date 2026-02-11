@@ -7,10 +7,13 @@ import '../../models/ad.dart';
 import '../../services/api_service.dart';
 import '../../core/service_locator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../screens/projects/post_project_screen.dart';
+import '../../screens/equipment/post_equipment_request_screen.dart';
 
 class FeatureCarousel extends StatefulWidget {
   final List<Ad>? ads;
-  const FeatureCarousel({super.key, this.ads});
+  final int tabIndex;
+  const FeatureCarousel({super.key, this.ads, this.tabIndex = 0});
 
   @override
   State<FeatureCarousel> createState() => _FeatureCarouselState();
@@ -20,47 +23,88 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
-  final List<Map<String, dynamic>> _defaultFeatures = [
-    {
-      'title': 'Your Home, Sorted',
-      'subtitle': 'Expert help for every task',
-      'button': 'Post a Task',
-      'colors': [const Color(0xFF1A1A4E), const Color(0xFF2D2D7A)], // Navy Gradient
-      'icon': Icons.home_repair_service_outlined,
-      'is_internal': true,
-    },
-    {
-      'title': 'Top-Rated Pros',
-      'subtitle': 'Verified experts ready to help',
-      'button': 'Post a Task',
-      'colors': [const Color(0xFFA42444), const Color(0xFFC93D5E)], // Maroon Gradient
-      'icon': Icons.verified_user_outlined,
-      'is_internal': true,
-    },
-    {
-      'title': 'Solar Deals',
-      'subtitle': 'Save on renewable energy',
-      'button': 'Post a Task',
-      'colors': [const Color(0xFF0A5C36), const Color(0xFF0D7A48)], // Green Gradient
-      'icon': Icons.solar_power_outlined,
-      'is_internal': true,
-    },
-  ];
+  List<Map<String, dynamic>> _getDefaultFeatures() {
+    return [
+      {
+        'title': 'Your Home, Sorted',
+        'subtitle': 'Expert help for every task',
+        'button': 'Post a Task',
+        'colors': [const Color(0xFF1A1A4E), const Color(0xFF2D2D7A)],
+        'icon': Icons.home_repair_service_outlined,
+        'action': 'app://create-task',
+      },
+      {
+        'title': 'Top-Rated Pros',
+        'subtitle': 'Verified experts ready to help',
+        'button': 'Consult a Pro',
+        'colors': [const Color(0xFFA42444), const Color(0xFFC93D5E)],
+        'icon': Icons.verified_user_outlined,
+        'action': 'app://create-project',
+      },
+      {
+        'title': 'Solar Deals',
+        'subtitle': 'Save on renewable energy',
+        'button': 'Request Equipment',
+        'colors': [const Color(0xFF0A5C36), const Color(0xFF0D7A48)],
+        'icon': Icons.solar_power_outlined,
+        'action': 'app://create-equipment-request',
+      },
+      {
+        'title': 'Construction Experts',
+        'subtitle': 'Build your dream project',
+        'button': 'Find a Contractor',
+        'colors': [const Color(0xFF333333), const Color(0xFF555555)],
+        'icon': Icons.engineering_outlined,
+        'action': 'app://create-task',
+      },
+    ];
+  }
 
   List<dynamic> get _features {
     if (widget.ads != null && widget.ads!.isNotEmpty) {
-      // Prioritize "notice_board" placement ads for the carousel
       final bannerAds = widget.ads!.where((ad) => ad.placement == 'notice_board').toList();
-      return bannerAds.isNotEmpty ? bannerAds : _defaultFeatures;
+      if (bannerAds.isNotEmpty) return bannerAds;
     }
-    return _defaultFeatures;
+    return _getDefaultFeatures();
   }
 
   @override
   void initState() {
     super.initState();
-    // Track impression for the first ad if it's a backend ad
-    _trackCurrentAdImpression();
+    // Default to the correct page for the tab
+    _currentIndex = _getInitialIndex();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(_currentIndex);
+      }
+      _trackCurrentAdImpression();
+    });
+  }
+
+  int _getInitialIndex() {
+    final features = _features;
+    // If we have ads, start at 0. If defaults, start at tabIndex.
+    if (features.isNotEmpty && features.first is Ad) return 0;
+    if (widget.tabIndex < features.length) return widget.tabIndex;
+    return 0;
+  }
+
+  @override
+  void didUpdateWidget(FeatureCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tabIndex != widget.tabIndex) {
+      final features = _features;
+      // Only auto-scroll for default features (ads don't change by tab)
+      if (features.isNotEmpty && features.first is! Ad) {
+        if (widget.tabIndex < features.length) {
+          _pageController.animateToPage(
+            widget.tabIndex,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+          );
+        }
+      }
+    }
   }
 
   void _trackCurrentAdImpression() {
@@ -72,39 +116,46 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
   }
 
   void _onAction(dynamic feature) {
+    String urlString;
     if (feature is Ad) {
-      // Track click
       getIt<ApiService>().trackAdClick(feature.id);
-
-      final String urlString = feature.actionUrl;
-      
-      // Handle internal app links
-      if (urlString.startsWith('app://')) {
-        if (urlString == 'app://create-task') {
-           Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const CreateTaskScreen(),
-            ),
-          );
-        }
-        return;
-      }
-
-      final Uri url = Uri.parse(urlString);
-      launchUrl(url).catchError((e) {
-        debugPrint('Could not launch ${feature.actionUrl}');
-        return false;
-      });
+      urlString = feature.actionUrl;
     } else {
-      // Default internal action
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const CreateTaskScreen(),
-        ),
-      );
+      urlString = feature['action'] ?? 'app://create-task';
     }
+    
+    // Handle internal app links
+    if (urlString.startsWith('app://')) {
+      if (urlString == 'app://create-task') {
+         Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const CreateTaskScreen(),
+          ),
+        );
+      } else if (urlString == 'app://create-project') {
+         Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PostProjectScreen(),
+          ),
+        );
+      } else if (urlString == 'app://create-equipment-request') {
+         Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PostEquipmentRequestScreen(),
+          ),
+        );
+      }
+      return;
+    }
+
+    final Uri url = Uri.parse(urlString);
+    launchUrl(url).catchError((e) {
+      debugPrint('Could not launch $urlString');
+      return false;
+    });
   }
 
   Color _hexToColor(String? hexString) {
@@ -208,7 +259,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                             size: 26,
                           ),
                         )
-                    ).animate().scale(delay: 400.ms, duration: 400.ms, curve: Curves.easeOutBack),
+                    ).animate().scale(duration: 400.ms, curve: Curves.easeOut),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -225,7 +276,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.1, end: 0),
+                            ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.05, end: 0),
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
@@ -236,7 +287,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                          ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1, end: 0),
+                            ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.05, end: 0),
                           const SizedBox(height: 8),
                           SizedBox(
                             height: 28,
@@ -259,7 +310,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                                 ),
                               ),
                             ),
-                          ).animate().fadeIn(delay: 700.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
+                            ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1)),
                         ],
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../models/badge.dart';
 import '../../config/theme.dart';
 
@@ -47,7 +48,7 @@ class BadgeIcon extends StatelessWidget {
       case BadgeIds.artisan:
         return Icons.construction;
       case BadgeIds.professional:
-        return Icons.work;
+        return LucideIcons.badgeCheck;
       case BadgeIds.certified:
         return Icons.military_tech;
       default:

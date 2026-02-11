@@ -32,6 +32,7 @@ class BrowseLoaded extends BrowseState {
   final String? tier;
   final bool hasReachedMax;
   final int page;
+  final int adsFrequency;
 
 
   const BrowseLoaded({
@@ -45,6 +46,7 @@ class BrowseLoaded extends BrowseState {
     this.tier,
     this.hasReachedMax = false,
     this.page = 0,
+    this.adsFrequency = 3,
   });
 
   BrowseLoaded copyWith({
@@ -58,6 +60,7 @@ class BrowseLoaded extends BrowseState {
     String? tier,
     bool? hasReachedMax,
     int? page,
+    int? adsFrequency,
   }) {
     return BrowseLoaded(
       tasks: tasks ?? this.tasks,
@@ -70,6 +73,7 @@ class BrowseLoaded extends BrowseState {
       tier: tier ?? this.tier,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       page: page ?? this.page,
+      adsFrequency: adsFrequency ?? this.adsFrequency,
     );
   }
 

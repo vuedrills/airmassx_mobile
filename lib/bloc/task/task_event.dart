@@ -60,3 +60,7 @@ class TaskComplete extends TaskEvent {
   final String taskId;
   const TaskComplete(this.taskId);
 }
+class TaskCancel extends TaskEvent {
+  final String taskId;
+  const TaskCancel(this.taskId);
+}

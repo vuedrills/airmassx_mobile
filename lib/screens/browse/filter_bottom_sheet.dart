@@ -10,6 +10,8 @@ import '../../../config/theme.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/location_picker.dart';
 import '../../services/geocoding_service.dart';
+import '../../utils/location_permission_helper.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Filter bottom sheet with price, distance, date, and status filters
 class FilterBottomSheet extends StatefulWidget {
@@ -428,6 +430,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   }
 
   Future<void> _useCurrentLocation() async {
+    // Check permission first
+    final permission = await LocationPermissionHelper.checkAndRequestPermission(context);
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+       return; 
+    }
+
     final geocoding = GeocodingService();
     final position = await geocoding.getCurrentLocation();
     

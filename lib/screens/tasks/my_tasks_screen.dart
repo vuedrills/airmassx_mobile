@@ -90,18 +90,6 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppTheme.navy),
-            onPressed: () {
-              // TODO: Implement search
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: AppTheme.navy),
-            onPressed: () {
-              // TODO: Navigate to notifications
-            },
-          ),
         ],
       ),
       body: Column(

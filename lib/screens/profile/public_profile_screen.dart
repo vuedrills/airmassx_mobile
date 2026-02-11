@@ -121,16 +121,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_user.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refreshProfile,

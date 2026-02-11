@@ -68,19 +68,25 @@ class HelpSupportScreen extends StatelessWidget {
                       query: 'subject=Support Request from App',
                     );
                     try {
-                      if (!await launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication)) {
-                          if (context.mounted) {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(content: Text('Could not open email client.')),
-                             );
-                          }
+                      // Attempt to launch the email client
+                      if (!await launchUrl(
+                        emailLaunchUri,
+                        mode: LaunchMode.externalApplication,
+                      )) {
+                        // Fallback: try different launch mode or show error
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No email client found. Please email us at support@airmass.co.zw')),
+                          );
+                        }
                       }
                     } catch (e) {
-                       if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Could not launch email app.')),
-                          );
-                       }
+                      debugPrint('Error launching email: $e');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open email app.')),
+                        );
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(

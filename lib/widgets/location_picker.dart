@@ -10,6 +10,8 @@ import '../../config/theme.dart';
 import '../../services/geocoding_service.dart';
 import 'dynamic_map.dart';
 import '../bloc/map_settings/map_settings_cubit.dart';
+import '../../utils/location_permission_helper.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// A comprehensive location picker with 3 input methods:
 /// 1. Use current GPS location
@@ -175,6 +177,33 @@ class _LocationPickerState extends State<LocationPicker> {
   void _useCurrentLocation() async {
     setState(() => _isLoadingLocation = true);
 
+    // Check precision using helper
+    final permission = await LocationPermissionHelper.checkAndRequestPermission(context);
+    
+    // If denied, stop (helper already showed dialog if needed)
+    if (permission == LocationPermission.denied || 
+        permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+        // Only show snackbar if permanently denied, as helper handles the other case
+        if (permission == LocationPermission.deniedForever) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Location permission is permanently denied. Please enable it in settings.'),
+              backgroundColor: Colors.red.shade600,
+              action: SnackBarAction(
+                label: 'Settings',
+                textColor: Colors.white,
+                onPressed: () => Geolocator.openAppSettings(),
+              ),
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    // Permission granted, proceed
     final position = await _geocodingService.getCurrentLocation();
     
     if (position == null) {

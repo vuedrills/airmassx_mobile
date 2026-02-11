@@ -74,6 +74,7 @@ dependencies:
   url_launcher: ^6.2.2
   qr_flutter: ^4.1.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.0
   lucide_icons: ^0.257.0
   path: ^1.9.1
   sentry_flutter: ^9.10.0
@@ -101,5 +102,7 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/logo_centered.png"
   min_sdk_android: 21
+  remove_alpha_ios: true
+  adaptive_icon_background: "#1A2B4A"
