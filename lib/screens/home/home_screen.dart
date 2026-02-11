@@ -428,26 +428,47 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         ),
       ),
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(42),
-        child: TabBar(
-          controller: _tabController,
-          isScrollable: false,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          indicatorColor: AppTheme.primary,
-          indicatorWeight: 3,
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelColor: AppTheme.navy,
-          unselectedLabelColor: AppTheme.neutral400,
-          dividerColor: Colors.transparent,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.1),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-          labelPadding: EdgeInsets.zero,
-          tabs: const [
-            Tab(text: 'Trades', height: 38),
-            Tab(text: 'Professional', height: 38),
-            Tab(text: 'Equipment', height: 38),
-            Tab(text: 'Contractors', height: 38),
-          ],
+        preferredSize: const Size.fromHeight(56),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6), // Very light grey surface
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: false,
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            indicator: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            labelColor: AppTheme.navy,
+            unselectedLabelColor: AppTheme.neutral500,
+            labelStyle: GoogleFonts.nunitoSans(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+            unselectedLabelStyle: GoogleFonts.nunitoSans(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+            tabs: const [
+              Tab(text: 'Trades', height: 40),
+              Tab(text: 'Pro', height: 40),
+              Tab(text: 'Equipment', height: 40),
+              Tab(text: 'Projects', height: 40),
+            ],
+          ),
         ),
       ),
     );
