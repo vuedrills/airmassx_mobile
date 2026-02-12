@@ -21,25 +21,34 @@ def center_image(input_path, output_path):
         print(f"Content size: {content_width}x{content_height}")
 
         # Create a new square image (use max dimension)
-        new_size = max(width, height)
-        # Or maybe keep 1024x1024 if standard icon size
-        new_size = max(new_size, 1024)
+        size = max(width, height)
+        # Add some padding (20% padding total = 10% each side)
+        padding_pct = 0.2
+        new_size = int(size / (1 - padding_pct))
         
-        new_img = Image.new("RGBA", (new_size, new_size), (0, 0, 0, 0))
+        # Or if we want a fixed output size, say 1024x1024
+        final_size = 1024
         
-        # Calculate center position
-        paste_x = (new_size - content_width) // 2
-        paste_y = (new_size - content_height) // 2
+        # Calculate scale to fit content within (1 - padding) of final_size
+        target_content_size = final_size * (1 - padding_pct)
+        scale = target_content_size / max(content_width, content_height)
         
-        # Crop content
+        new_content_width = int(content_width * scale)
+        new_content_height = int(content_height * scale)
+        
         content = img.crop(bbox)
+        content = content.resize((new_content_width, new_content_height), Image.Resampling.LANCZOS)
         
-        # Paste centered
+        new_img = Image.new("RGBA", (final_size, final_size), (0, 0, 0, 0))
+        
+        paste_x = (final_size - new_content_width) // 2
+        paste_y = (final_size - new_content_height) // 2
+        
         new_img.paste(content, (paste_x, paste_y))
         
         # Save
         new_img.save(output_path)
-        print(f"Saved centered image to {output_path}")
+        print(f"Saved larger centered image to {output_path}")
         
     except Exception as e:
         print(f"Error: {e}")

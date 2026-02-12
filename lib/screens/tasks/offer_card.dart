@@ -436,15 +436,28 @@ class OfferCard extends StatelessWidget {
                                           leading: Container(
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
-                                              color: AppTheme.primary.withOpacity(0.1),
+                                              color: Colors.grey.withOpacity(0.1),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
-                                            child: const Icon(Icons.account_balance_wallet, color: AppTheme.primary),
+                                            child: const Icon(Icons.account_balance_wallet, color: Colors.grey),
                                           ),
-                                          title: const Text('Secure Escrow', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.navy)),
-                                          subtitle: const Text('Funds held in your wallet & released on completion.'),
-                                          trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                                          onTap: () => Navigator.pop(context, 'escrow'),
+                                          title: Row(
+                                            children: [
+                                              const Text('Secure Escrow', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.shade200,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text('Coming Soon', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                              ),
+                                            ],
+                                          ),
+                                          subtitle: const Text('Funds held in your wallet & released on completion.', style: TextStyle(color: Colors.grey)),
+                                          // trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                                          onTap: null, // Disabled
                                         ),
                                         const Divider(height: 24),
                                         ListTile(

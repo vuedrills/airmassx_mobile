@@ -10,6 +10,7 @@ import '../../bloc/auth/auth_state.dart';
 import '../../config/theme.dart';
 import '../../core/validators.dart';
 import '../../widgets/brand_icons.dart';
+import '../../services/api_service.dart';
 
 /// Login screen following Airmass Xpress premium design
 class LoginScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isGoogleSignInEnabled = true;
 
   late AnimationController _animationController;
   late List<Animation<double>> _fadeAnimations;
@@ -57,7 +59,17 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       );
     });
 
+    _checkGoogleSignInStatus();
     _animationController.forward();
+  }
+
+  Future<void> _checkGoogleSignInStatus() async {
+    final enabled = await ApiService().getGoogleSignInStatus();
+    if (mounted) {
+      setState(() {
+        _isGoogleSignInEnabled = enabled;
+      });
+    }
   }
 
   @override
@@ -189,38 +201,40 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
                     const SizedBox(height: 32),
 
-                    // Social Auth (Moved to Top)
-                    _buildAnimatedWidget(
-                      index: 1,
-                      child: Column(
-                        children: [
-                          BlocBuilder<AuthBloc, AuthState>(
-                            builder: (context, state) {
-                              return _buildSocialButton(
-                                context,
-                                label: 'Continue with Google',
-                                icon: Icons.g_mobiledata_outlined,
-                                color: AppTheme.textPrimary,
-                                isLoading: state is AuthLoading,
-                                onTap: () {
-                                  context.read<AuthBloc>().add(AuthGoogleLogin());
-                                },
-                              );
-                            },
-                          ),
-                        ],
+                    if (_isGoogleSignInEnabled) ...[
+                      // Social Auth (Moved to Top)
+                      _buildAnimatedWidget(
+                        index: 1,
+                        child: Column(
+                          children: [
+                            BlocBuilder<AuthBloc, AuthState>(
+                              builder: (context, state) {
+                                return _buildSocialButton(
+                                  context,
+                                  label: 'Continue with Google',
+                                  icon: Icons.g_mobiledata_outlined,
+                                  color: AppTheme.textPrimary,
+                                  isLoading: state is AuthLoading,
+                                  onTap: () {
+                                    context.read<AuthBloc>().add(AuthGoogleLogin());
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // OR Divider (Moved to Top)
-                    _buildAnimatedWidget(
-                      index: 2,
-                      child: _buildPremiumDivider(text: 'OR LOGIN WITH EMAIL'),
-                    ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // OR Divider (Moved to Top)
+                      _buildAnimatedWidget(
+                        index: 2,
+                        child: _buildPremiumDivider(text: 'OR LOGIN WITH EMAIL'),
+                      ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
+                    ],
                     
                     // Email
                     _buildAnimatedWidget(

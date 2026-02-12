@@ -169,6 +169,16 @@ class ApiService {
     }
   }
 
+  Future<bool> getGoogleSignInStatus() async {
+    try {
+      final data = await _get('/settings/google-signin');
+      return data['enabled'] == true;
+    } catch (e) {
+      debugPrint('Error fetching Google Sign-In status: $e');
+      return true; // Default to enabled on error
+    }
+  }
+
   /// Reports Google Maps API usage to backend. Returns true if limit NOT reached.
   Future<bool> reportMapUsage() async {
     try {
@@ -1701,6 +1711,19 @@ class ApiService {
     } catch (e) {
       debugPrint('Error fetching ads frequency: $e');
       return 3;
+    }
+  }
+
+  // Support
+  Future<void> sendSupportMessage({required String subject, required String message}) async {
+    try {
+      await _dio.post('/support/tickets', data: {
+        'subject': subject, 
+        'message': message,
+      });
+    } catch (e) {
+      debugPrint('ApiService: Error sending support message: $e');
+      rethrow;
     }
   }
 }

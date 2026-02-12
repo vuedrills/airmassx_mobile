@@ -13,6 +13,7 @@ import '../../core/validators.dart';
 import '../../bloc/profile/profile_bloc.dart';
 import '../../bloc/profile/profile_event.dart';
 import '../../widgets/brand_icons.dart';
+import '../../services/api_service.dart';
 
 /// Register screen following Airmass Xpress premium design
 class RegisterScreen extends StatefulWidget {
@@ -35,6 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
   bool _isPasswordVisible = false;
   bool _acceptedTerms = false;
   bool _wantsToEarn = false;
+  bool _isGoogleSignInEnabled = true;
 
   late AnimationController _animationController;
   late List<Animation<double>> _fadeAnimations;
@@ -71,7 +73,17 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       );
     });
 
+    _checkGoogleSignInStatus();
     _animationController.forward();
+  }
+
+  Future<void> _checkGoogleSignInStatus() async {
+    final enabled = await ApiService().getGoogleSignInStatus();
+    if (mounted) {
+      setState(() {
+        _isGoogleSignInEnabled = enabled;
+      });
+    }
   }
 
   @override
@@ -231,34 +243,36 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                     
                     const SizedBox(height: 24),
 
-                    // Social Auth
-                    _buildAnimatedWidget(
-                      index: 2,
-                      child: BlocBuilder<AuthBloc, AuthState>(
-                        builder: (context, state) {
-                          return _buildSocialButton(
-                            context,
-                            label: 'Continue with Google',
-                            icon: Icons.g_mobiledata_outlined,
-                            color: AppTheme.textPrimary,
-                            isLoading: state is AuthLoading,
-                            onTap: () {
-                              context.read<AuthBloc>().add(AuthGoogleLogin());
-                            },
-                          );
-                        },
+                    if (_isGoogleSignInEnabled) ...[
+                      // Social Auth
+                      _buildAnimatedWidget(
+                        index: 2,
+                        child: BlocBuilder<AuthBloc, AuthState>(
+                          builder: (context, state) {
+                            return _buildSocialButton(
+                              context,
+                              label: 'Continue with Google',
+                              icon: Icons.g_mobiledata_outlined,
+                              color: AppTheme.textPrimary,
+                              isLoading: state is AuthLoading,
+                              onTap: () {
+                                context.read<AuthBloc>().add(AuthGoogleLogin());
+                              },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // OR Divider
-                    _buildAnimatedWidget(
-                      index: 3,
-                      child: _buildPremiumDivider(text: 'OR SIGN UP WITH EMAIL'),
-                    ),
-                    
-                    const SizedBox(height: 24),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // OR Divider
+                      _buildAnimatedWidget(
+                        index: 3,
+                        child: _buildPremiumDivider(text: 'OR SIGN UP WITH EMAIL'),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                    ],
                     
                     // Full Name
                     _buildAnimatedWidget(

@@ -43,12 +43,6 @@ class _TopUpScreenState extends State<TopUpScreen> {
       'image': 'assets/images/innbucks.png',
       'color': Colors.blue,
     },
-    {
-      'id': 'omari',
-      'name': "O'mari",
-      'icon': LucideIcons.wallet,
-      'color': Colors.orange,
-    },
   ];
 
   @override

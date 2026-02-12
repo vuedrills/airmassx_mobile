@@ -330,14 +330,54 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
                             final int taskCount = state.tasks.length;
-                            final bool hasAds = state.ads.isNotEmpty;
-                            final int adPosition = state.adsFrequency;
+                            final bool hasInternalAds = state.ads.isNotEmpty;
+                            // Internal Ad position (from Admin)
+                            final int internalAdPosition = state.adsFrequency;
 
-                            if (hasAds && index == adPosition && taskCount >= adPosition) {
+                            // Handle Internal Platform Ad
+                            if (hasInternalAds && index == internalAdPosition && taskCount >= internalAdPosition) {
                               return _AdCarouselItem(ads: state.ads);
                             }
 
-                            final int taskIndex = (hasAds && index > adPosition) ? index - 1 : index;
+                            // Adjust index for internal ad
+                            int adjustedIndex = (hasInternalAds && index > internalAdPosition) ? index - 1 : index;
+
+                            // Handle AdMob Ad every 15 tasks
+                            // Logic: 15 tasks -> 1 Ad -> 15 tasks -> 1 Ad
+                            // Block size = 16 (15 tasks + 1 ad)
+                            // Ad slots at adjustedIndex: 15, 31, 47...
+                            // (adjustedIndex + 1) % 16 == 0
+                            
+                            // Check if this adjusted slot is effectively an AdMob slot
+                            // We need to map the list index to "content index vs ad index"
+                            // But wait, the list index is linear.
+                            // Let's count items:
+                            // Items: T0..T14 (15 items) -> AdMob1 -> T15..T29 -> AdMob2
+                            // Indices: 0..14 -> 15 -> 16..30 -> 31
+                            
+                            // We need to account for the internal ad shift too.
+                            // Let's simplify: 
+                            // 1. Check if it's the internal ad slot first (done above).
+                            // 2. If not, it's either a task or an AdMob ad.
+                            // 3. Let's look at `adjustedIndex`. This is the index in the stream of (Tasks + AdMobAds).
+                            //    We want an AdMob ad at indices 15, 31, 47... of this stream.
+                            
+                            if ((adjustedIndex + 1) % 16 == 0) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                child: BannerAdWidget(),
+                              );
+                            }
+
+                            // It's a task.
+                            // Map adjustedIndex to taskIndex.
+                            // Blocks of 16 contain 15 tasks.
+                            // taskIndex = (adjustedIndex / 16) * 15 + (adjustedIndex % 16)
+                            // But since the last item in block (15) is ad, we only get 0..14 per block.
+                            
+                            final int blockIndex = adjustedIndex ~/ 16;
+                            final int indexInBlock = adjustedIndex % 16;
+                            final int taskIndex = (blockIndex * 15) + indexInBlock;
 
                             if (taskIndex < taskCount) {
                               return TaskCard(task: state.tasks[taskIndex])
@@ -347,7 +387,14 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                             }
                             return null;
                           },
-                          childCount: state.tasks.length + (state.ads.isNotEmpty && state.tasks.length >= state.adsFrequency ? 1 : 0),
+                          // Calculate child count:
+                          // Total Tasks = T
+                          // Internal Ad = 1 (if T >= freq)
+                          // AdMob Ads = floor(T / 15)
+                          // Total = T + 1 + floor(T / 15)
+                          childCount: state.tasks.length 
+                              + (state.ads.isNotEmpty && state.tasks.length >= state.adsFrequency ? 1 : 0)
+                              + (state.tasks.length ~/ 15),
                         ),
                       ),
                     );
@@ -409,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           child: const Icon(Icons.add, color: Colors.white, size: 28),
         ).animate(onPlay: (controller) => controller.repeat(reverse: true))
          .scale(begin: const Offset(1, 1), end: const Offset(1.08, 1.08), duration: 1500.ms, curve: Curves.easeInOut),
-        bottomNavigationBar: const BannerAdWidget(),
+        // Removed fixed bottomNavigationBar
       ),
     );
   }

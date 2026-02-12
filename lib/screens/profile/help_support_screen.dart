@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/api_service.dart';
 import '../../config/theme.dart';
 
 /// Help & Support screen - FAQ and contact info
@@ -64,7 +66,7 @@ class HelpSupportScreen extends StatelessWidget {
                   onPressed: () async {
                     final Uri emailLaunchUri = Uri(
                       scheme: 'mailto',
-                      path: 'support@airmass.co.zw',
+                      path: 'ericson@airmass.co.zw',
                       query: 'subject=Support Request from App',
                     );
                     try {
@@ -76,7 +78,22 @@ class HelpSupportScreen extends StatelessWidget {
                         // Fallback: try different launch mode or show error
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('No email client found. Please email us at support@airmass.co.zw')),
+                            SnackBar(
+                              content: const Text('No email client found. Please email ericson@airmass.co.zw'),
+                              action: SnackBarAction(
+                                label: 'COPY',
+                                onPressed: () {
+                                  // Clipboard support requires 'package:flutter/services.dart'
+                                  // We need to import it if not present, but for now let's check imports
+                                  // Assuming we can add import or it's there.
+                                  // Actually, let's just use the Clipboard class.
+                                  Clipboard.setData(const ClipboardData(text: 'ericson@airmass.co.zw'));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Email copied to clipboard')),
+                                  );
+                                },
+                              ),
+                            ),
                           );
                         }
                       }
@@ -98,6 +115,15 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.email_outlined),
                   label: const Text('Contact Support'),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => _showSupportDialog(context),
+                  icon: const Icon(Icons.message_outlined),
+                  label: const Text('Send Message within App'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                  ),
                 ),
               ],
             ),
@@ -269,6 +295,85 @@ class HelpSupportScreen extends StatelessWidget {
         title: Text(title, style: const TextStyle(color: AppTheme.navy, fontWeight: FontWeight.w600)),
         trailing: Icon(Icons.chevron_right, color: AppTheme.neutral400, size: 20),
         onTap: onTap,
+      ),
+    );
+  }
+
+  void _showSupportDialog(BuildContext context) {
+    final subjectController = TextEditingController();
+    final messageController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Contact Support'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: subjectController,
+                decoration: const InputDecoration(
+                  labelText: 'Subject',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'Message',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+                maxLines: 4,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                if (subjectController.text.isEmpty || messageController.text.isEmpty) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(content: Text('Please fill in all fields')),
+                   );
+                   return;
+                }
+                
+                setState(() => isLoading = true);
+                
+                try {
+                  await ApiService().sendSupportMessage(
+                    subject: subjectController.text,
+                    message: messageController.text,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context); // Close dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(backgroundColor: Colors.green, content: Text('Message sent successfully! We will get back to you soon.')),
+                    );
+                  }
+                } catch (e) {
+                   if (context.mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(backgroundColor: Colors.red, content: Text('Failed to send message. Please try again.')),
+                     );
+                   }
+                } finally {
+                  if (context.mounted) setState(() => isLoading = false);
+                }
+              }, 
+              child: isLoading 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Send'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -67,13 +67,9 @@
 		<key>NSMicrophoneUsageDescription</key>
 		<string>We need access to your microphone for video recording purposes if required during verification.</string>
 		<key>GADApplicationIdentifier</key>
-		<string>ca-app-pub-3940256099942544~1458002511</string>
-		<key>FacebookAppID</key>
-		<string>1597052071716440</string>
-		<key>FacebookClientToken</key>
-		<string>e29fe860a25ecbc30f24b24670e8429b</string>
-		<key>FacebookDisplayName</key>
-		<string>Airmass Xpress</string>
+		<string>ca-app-pub-1237074677015039~3786174369</string>
+
+
 		<key>NSAppTransportSecurity</key>
 		<dict>
 			<key>NSAllowsArbitraryLoads</key>

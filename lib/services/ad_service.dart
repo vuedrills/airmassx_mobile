@@ -15,18 +15,18 @@ class AdService {
   // Use AppConfig for AdMob IDs
   String get bannerAdUnitId {
     if (Platform.isAndroid) {
-      return AppConfig.shared.adMobAppIdAndroid;
+      return AppConfig.shared.adMobBannerUnitIdAndroid;
     } else if (Platform.isIOS) {
-      return AppConfig.shared.adMobAppIdIos;
+      return AppConfig.shared.adMobBannerUnitIdIos;
     }
     throw UnsupportedError('Unsupported platform');
   }
 
   String get interstitialAdUnitId {
      if (Platform.isAndroid) {
-      return AppConfig.shared.adMobAppIdAndroid; // TODO: Use separate interstitial ID if needed
+      return AppConfig.shared.adMobInterstitialUnitIdAndroid;
     } else if (Platform.isIOS) {
-      return AppConfig.shared.adMobAppIdIos; // TODO: Use separate interstitial ID if needed
+      return AppConfig.shared.adMobInterstitialUnitIdIos;
     }
     throw UnsupportedError('Unsupported platform');
   }

@@ -36,7 +36,7 @@ class AppConfig {
           return 'http://10.0.2.2:8080/api/v1';
         }
         // Use local IP for iOS Simulator/Device to avoid connection refused
-        return 'http://192.168.99.174:8080/api/v1'; 
+        return 'http://192.168.1.239:8080/api/v1'; 
     }
   }
   
@@ -54,7 +54,7 @@ class AppConfig {
           return 'http://10.0.2.2:8080';
         }
         // Use local IP for iOS Simulator/Device
-        return 'http://192.168.99.174:8080'; 
+        return 'http://192.168.1.239:8080'; 
     }
   }
 
@@ -63,26 +63,46 @@ class AppConfig {
     return 'https://788e7a7e1f98018a13a7c6f0920400c4@o4508711466074112.ingest.us.sentry.io/4508742517817344';
   }
 
-  // AdMob App ID (Android)
+  // AdMob App ID (Android) - FOUND IN: android/app/src/main/AndroidManifest.xml
   String get adMobAppIdAndroid {
     switch (_environment) {
       case AppEnvironment.prod:
-        return 'ca-app-pub-3940256099942544~3347511713'; // TODO: Replace with Real Prod ID
+        return 'ca-app-pub-1237074677015039~3506864960'; 
       case AppEnvironment.dev:
       default:
-        return 'ca-app-pub-3940256099942544~3347511713'; // Test ID
+        return 'ca-app-pub-1237074677015039~3506864960'; 
     }
   }
 
-  // AdMob App ID (iOS)
+  // AdMob Banner Unit ID (Android)
+  String get adMobBannerUnitIdAndroid {
+    return 'ca-app-pub-1237074677015039/8543677025'; 
+  }
+
+  // AdMob Interstitial Unit ID (Android)
+  String get adMobInterstitialUnitIdAndroid {
+    return 'ca-app-pub-1237074677015039/5917513681';
+  }
+
+  // AdMob App ID (iOS) - FOUND IN: ios/Runner/Info.plist
   String get adMobAppIdIos {
     switch (_environment) {
       case AppEnvironment.prod:
-        return 'ca-app-pub-3940256099942544~1458002511'; // TODO: Replace with Real Prod ID
+        return 'ca-app-pub-1237074677015039~3786174369';
       case AppEnvironment.dev:
       default:
-        return 'ca-app-pub-3940256099942544~1458002511'; // Test ID
+        return 'ca-app-pub-1237074677015039~3786174369';
     }
+  }
+
+  // AdMob Banner Unit ID (iOS)
+  String get adMobBannerUnitIdIos {
+    return 'ca-app-pub-1237074677015039/3291350348';
+  }
+
+  // AdMob Interstitial Unit ID (iOS)
+  String get adMobInterstitialUnitIdIos {
+    return 'ca-app-pub-1237074677015039/6999387414';
   }
   
   // Google Sign-In Client IDs
