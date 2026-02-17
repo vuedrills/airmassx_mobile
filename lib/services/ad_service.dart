@@ -68,7 +68,7 @@ class AdService {
 
     try {
       final response = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/v1/settings/admob-status'),
+        Uri.parse('${AppConfig.shared.apiUrl}/settings/admob-status'),
       ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {

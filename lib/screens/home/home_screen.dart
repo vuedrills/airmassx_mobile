@@ -1028,6 +1028,7 @@ class _AdCarouselItemState extends State<_AdCarouselItem> {
   Widget build(BuildContext context) {
     if (widget.ads.isEmpty) return const SizedBox.shrink();
 
+    // Optimization for single ad
     if (widget.ads.length == 1) {
       return Container(
         height: 160,
@@ -1050,7 +1051,10 @@ class _AdCarouselItemState extends State<_AdCarouselItem> {
             },
             itemCount: widget.ads.length,
             itemBuilder: (context, index) {
-              return AdCard(ad: widget.ads[index]);
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: AdCard(ad: widget.ads[index]),
+              );
             },
           ),
           Positioned(

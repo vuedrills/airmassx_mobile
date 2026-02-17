@@ -163,6 +163,9 @@ class User {
       'business_address': businessAddress,
     };
   }
+  bool get isProfessional => taskerProfile?.status == 'approved';
+  bool get isIdVerifiedOnly => isVerified && !isProfessional;
+
   User copyWith({
     String? id,
     String? email,

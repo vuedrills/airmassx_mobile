@@ -43,6 +43,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../core/ui_utils.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final String taskId;
@@ -292,13 +293,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                                           Row(
                                             children: [
                                               if ((task.posterRating ?? 0) > 0) ...[
-                                                const Icon(LucideIcons.star, size: 22, color: Colors.amber),
+                                                const Icon(Icons.star, size: 22, color: Colors.orange),
                                                 const SizedBox(width: 4),
                                                 Text(
                                                   task.posterRating!.toStringAsFixed(1),
                                                   style: const TextStyle(
                                                     fontSize: 16,
-                                                    color: Colors.amber,
+                                                    color: Colors.orange,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -456,7 +457,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
-                                                '\$${task.budget.toStringAsFixed(0)}',
+                                                '\$${UIUtils.formatBudget(task.budget)}',
                                                 style: GoogleFonts.oswald(
                                                   fontSize: 20,
                                                   fontWeight: FontWeight.w700,

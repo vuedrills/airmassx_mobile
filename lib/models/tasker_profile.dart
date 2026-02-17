@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'portfolio_item.dart';
 
 class Qualification extends Equatable {
   final String name;        // Qualification type (e.g., National Diploma, BSc)
@@ -97,7 +98,8 @@ class TaskerProfile extends Equatable {
   final String? addressDocumentUrl;
   final List<String> idDocumentUrls;
   final List<String> professionIds;
-  final List<String> portfolioUrls;
+  final List<PortfolioItem> portfolioItems;
+  final List<String> portfolioUrls; // Deprecated
   final List<Qualification> qualifications;
   final Availability availability;
   
@@ -119,6 +121,7 @@ class TaskerProfile extends Equatable {
     this.addressDocumentUrl,
     this.idDocumentUrls = const [],
     this.professionIds = const [],
+    this.portfolioItems = const [],
     this.portfolioUrls = const [],
     this.qualifications = const [],
     this.availability = const Availability(),
@@ -140,6 +143,7 @@ class TaskerProfile extends Equatable {
     String? addressDocumentUrl,
     List<String>? idDocumentUrls,
     List<String>? professionIds,
+    List<PortfolioItem>? portfolioItems,
     List<String>? portfolioUrls,
     List<Qualification>? qualifications,
     Availability? availability,
@@ -160,6 +164,7 @@ class TaskerProfile extends Equatable {
       addressDocumentUrl: addressDocumentUrl ?? this.addressDocumentUrl,
       idDocumentUrls: idDocumentUrls ?? this.idDocumentUrls,
       professionIds: professionIds ?? this.professionIds,
+      portfolioItems: portfolioItems ?? this.portfolioItems,
       portfolioUrls: portfolioUrls ?? this.portfolioUrls,
       qualifications: qualifications ?? this.qualifications,
       availability: availability ?? this.availability,
@@ -183,6 +188,10 @@ class TaskerProfile extends Equatable {
       addressDocumentUrl: json['address_document_url'],
       idDocumentUrls: List<String>.from(json['id_document_urls'] ?? []),
       professionIds: List<String>.from(json['profession_ids'] ?? []),
+      portfolioItems: (json['portfolio_items'] as List<dynamic>?)
+              ?.map((e) => PortfolioItem.fromJson(e))
+              .toList() ??
+          [],
       portfolioUrls: List<String>.from(json['portfolio_urls'] ?? []),
       qualifications: (json['qualifications'] as List<dynamic>?)
               ?.map((e) => Qualification.fromJson(e))
@@ -211,6 +220,7 @@ class TaskerProfile extends Equatable {
       'address_document_url': addressDocumentUrl,
       'id_document_urls': idDocumentUrls,
       'profession_ids': professionIds,
+      'portfolio_items': portfolioItems.map((e) => e.toJson()).toList(),
       'portfolio_urls': portfolioUrls,
       'qualifications': qualifications.map((e) => e.toJson()).toList(),
       'availability': availability.toJson(),

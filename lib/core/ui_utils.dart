@@ -46,4 +46,15 @@ class UIUtils {
       ),
     );
   }
+  static String formatBudget(double amount) {
+    if (amount >= 1000000) {
+      double m = amount / 1000000;
+      return m.toStringAsFixed(m % 1 == 0 ? 0 : 1) + 'M';
+    }
+    if (amount >= 10000) {
+      double k = amount / 1000;
+      return k.toStringAsFixed(0) + 'K';
+    }
+    return amount.toStringAsFixed(0);
+  }
 }

@@ -122,8 +122,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Your withdrawal has been processed successfully!',
+            Text(
+              'Withdrawal request submitted. You\'ll be notified once approved and processed.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -147,11 +147,12 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Funds will be transferred to your account shortly.',
+              'Status: Pending Approval',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade600,
+                color: Colors.orange.shade700,
                 fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -480,18 +481,18 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(color: Colors.blue.shade200),
                 ),
                 child: Row(
                   children: [
-                    Icon(LucideIcons.info, color: Colors.green.shade700, size: 18),
+                    Icon(LucideIcons.info, color: Colors.blue.shade700, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Withdrawals are processed instantly. Funds will be sent to your mobile money account shortly.',
-                        style: TextStyle(color: Colors.green.shade900, fontSize: 12),
+                        'Withdrawal requests are reviewed by our team and usually processed within 24 hours.',
+                        style: TextStyle(color: Colors.blue.shade900, fontSize: 12),
                       ),
                     ),
                   ],

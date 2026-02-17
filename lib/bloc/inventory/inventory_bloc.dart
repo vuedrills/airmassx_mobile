@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
 import '../../core/service_locator.dart';
+import '../../core/error_handler.dart';
 import 'inventory_event.dart';
 import 'inventory_state.dart';
 
@@ -14,7 +15,7 @@ class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
         final items = await _apiService.getMyInventory();
         emit(InventoryLoaded(items));
       } catch (e) {
-        emit(InventoryError(e.toString()));
+        emit(InventoryError(ErrorHandler.getUserFriendlyMessage(e)));
       }
     });
 
@@ -26,7 +27,7 @@ class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
         emit(InventoryOperationSuccess('Item added successfully'));
         emit(InventoryLoaded(items));
       } catch (e) {
-        emit(InventoryError(e.toString()));
+        emit(InventoryError(ErrorHandler.getUserFriendlyMessage(e)));
       }
     });
 
@@ -38,7 +39,7 @@ class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
         emit(InventoryOperationSuccess('Item updated successfully'));
         emit(InventoryLoaded(items));
       } catch (e) {
-        emit(InventoryError(e.toString()));
+        emit(InventoryError(ErrorHandler.getUserFriendlyMessage(e)));
       }
     });
 
@@ -50,7 +51,7 @@ class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
         emit(InventoryOperationSuccess('Item deleted successfully'));
         emit(InventoryLoaded(items));
       } catch (e) {
-        emit(InventoryError(e.toString()));
+        emit(InventoryError(ErrorHandler.getUserFriendlyMessage(e)));
       }
     });
   }

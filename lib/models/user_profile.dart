@@ -199,6 +199,8 @@ class UserProfile extends Equatable {
 
   bool get isProfessional => taskerProfile?.status == 'approved';
   bool get isProfessionalPending => taskerProfile?.status == 'pending_review';
+  bool get isTasker => taskerProfile != null;
+  bool get isIdVerifiedOnly => isVerified && !isProfessional;
 
   @override
   List<Object?> get props => [

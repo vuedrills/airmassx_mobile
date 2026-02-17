@@ -62,71 +62,59 @@ class HelpSupportScreen extends StatelessWidget {
                   style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final Uri emailLaunchUri = Uri(
-                      scheme: 'mailto',
-                      path: 'ericson@airmass.co.zw',
-                      query: 'subject=Support Request from App',
-                    );
-                    try {
-                      // Attempt to launch the email client
-                      if (!await launchUrl(
-                        emailLaunchUri,
-                        mode: LaunchMode.externalApplication,
-                      )) {
-                        // Fallback: try different launch mode or show error
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('No email client found. Please email ericson@airmass.co.zw'),
-                              action: SnackBarAction(
-                                label: 'COPY',
-                                onPressed: () {
-                                  // Clipboard support requires 'package:flutter/services.dart'
-                                  // We need to import it if not present, but for now let's check imports
-                                  // Assuming we can add import or it's there.
-                                  // Actually, let's just use the Clipboard class.
-                                  Clipboard.setData(const ClipboardData(text: 'ericson@airmass.co.zw'));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Email copied to clipboard')),
-                                  );
-                                },
-                              ),
-                            ),
-                          );
-                        }
-                      }
-                    } catch (e) {
-                      debugPrint('Error launching email: $e');
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Could not open email app.')),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  icon: const Icon(Icons.email_outlined),
-                  label: const Text('Contact Support'),
-                ),
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: () => _showSupportDialog(context),
-                  icon: const Icon(Icons.message_outlined),
-                  label: const Text('Send Message within App'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.primary,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showSupportScreen(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.message_outlined),
+                    label: const Text('Contact Support'),
                   ),
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(height: 32),
+          
+          Text(
+            'Direct Contact',
+            style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.navy,
+                ),
+          ),
+          const SizedBox(height: 16),
+          
+          _buildContactChip(
+            context,
+            Icons.phone_outlined,
+            'Call Us',
+            '+263 789 925 823',
+            () => _launchURL(context, 'tel:+263789925823'),
+          ),
+          
+          _buildContactChip(
+            context,
+            Icons.email_outlined,
+            'Email Us',
+            'support@airmass.co.zw',
+            () => _launchURL(context, 'mailto:support@airmass.co.zw'),
+          ),
+          
+          _buildContactChip(
+            context,
+            Icons.location_on_outlined,
+            'Visit Us',
+            '356 Rayden Drive Borrowdale,\nHarare, Zimbabwe',
+            () {},
+            isMultiline: true,
           ),
 
           const SizedBox(height: 40),
@@ -147,11 +135,6 @@ class HelpSupportScreen extends StatelessWidget {
             'Tap the "Post Task" button on the home screen, fill in the details including title, description, budget, and location, then submit.',
           ),
 
-          _buildFAQItem(
-            context,
-            'How does payment work?',
-            'Payment is securely held by Airmass Xpress Pay until the task is completed. Once you confirm completion, the payment is released to the Tasker.',
-          ),
 
           _buildFAQItem(
             context,
@@ -299,78 +282,242 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
-  void _showSupportDialog(BuildContext context) {
-    final subjectController = TextEditingController();
-    final messageController = TextEditingController();
-    bool isLoading = false;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Contact Support'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: subjectController,
-                decoration: const InputDecoration(
-                  labelText: 'Subject',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: messageController,
-                decoration: const InputDecoration(
-                  labelText: 'Message',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                maxLines: 4,
-              ),
-            ],
+  Widget _buildContactChip(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+    VoidCallback onTap, {
+    bool isMultiline = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.neutral200),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
+          child: Icon(icon, color: AppTheme.primary, size: 20),
+        ),
+        title: Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        subtitle: Text(
+          value,
+          style: const TextStyle(
+            color: AppTheme.navy,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            height: 1.3,
+          ),
+        ),
+        trailing: onTap != null && value != '356 Rayden Drive Borrowdale,\nHarare, Zimbabwe' // Address isn't clickable here
+            ? Icon(Icons.open_in_new, color: AppTheme.neutral400, size: 18)
+            : null,
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _showSupportScreen(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const _ContactSupportScreen(),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+}
+
+class _ContactSupportScreen extends StatefulWidget {
+  const _ContactSupportScreen();
+
+  @override
+  State<_ContactSupportScreen> createState() => _ContactSupportScreenState();
+}
+
+class _ContactSupportScreenState extends State<_ContactSupportScreen> {
+  final _subjectController = TextEditingController();
+  final _messageController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_subjectController.text.trim().isEmpty || _messageController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await ApiService().sendSupportMessage(
+        subject: _subjectController.text.trim(),
+        message: _messageController.text.trim(),
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('Message sent successfully! We will get back to you soon.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Failed to send message. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Contact Support'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.navy,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'How can we help?',
+              style: TextStyle(
+                fontSize: 24, 
+                fontWeight: FontWeight.bold, 
+                color: AppTheme.navy
+              ),
             ),
-            ElevatedButton(
-              onPressed: isLoading ? null : () async {
-                if (subjectController.text.isEmpty || messageController.text.isEmpty) {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     const SnackBar(content: Text('Please fill in all fields')),
-                   );
-                   return;
-                }
-                
-                setState(() => isLoading = true);
-                
-                try {
-                  await ApiService().sendSupportMessage(
-                    subject: subjectController.text,
-                    message: messageController.text,
-                  );
-                  if (context.mounted) {
-                    Navigator.pop(context); // Close dialog
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(backgroundColor: Colors.green, content: Text('Message sent successfully! We will get back to you soon.')),
-                    );
-                  }
-                } catch (e) {
-                   if (context.mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                       const SnackBar(backgroundColor: Colors.red, content: Text('Failed to send message. Please try again.')),
-                     );
-                   }
-                } finally {
-                  if (context.mounted) setState(() => isLoading = false);
-                }
-              }, 
-              child: isLoading 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Send'),
+            const SizedBox(height: 8),
+            const Text(
+              'Fill out the form below and our team will get back to you within 24 hours.',
+              style: TextStyle(
+                fontSize: 16, 
+                color: AppTheme.textSecondary,
+                height: 1.5
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            // Subject Field
+            const Text(
+              'Subject',
+              style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.navy, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _subjectController,
+              decoration: InputDecoration(
+                hintText: 'e.g., Issue with payment',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Message Field
+            const Text(
+              'Message',
+              style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.navy, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _messageController,
+              maxLines: 6,
+              decoration: InputDecoration(
+                hintText: 'Describe your issue in detail...',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  disabledBackgroundColor: AppTheme.primary.withOpacity(0.5),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 24, 
+                        width: 24, 
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      )
+                    : const Text(
+                        'Send Message',
+                        style: TextStyle(
+                          fontSize: 16, 
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+              ),
             ),
           ],
         ),

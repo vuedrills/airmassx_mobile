@@ -1,7 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../models/portfolio_item.dart';
 import '../../models/tasker_profile.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
+import '../../core/error_handler.dart';
 import 'pro_registration_event.dart';
 import 'pro_registration_state.dart';
 
@@ -29,6 +31,7 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
           professionalType: initialProfile?.taskerProfile?.professionalType,
           idDocumentUrls: initialProfile?.taskerProfile?.idDocumentUrls ?? const [],
           professionIds: initialProfile?.taskerProfile?.professionIds ?? const [],
+          portfolioItems: initialProfile?.taskerProfile?.portfolioItems ?? const [],
           portfolioUrls: initialProfile?.taskerProfile?.portfolioUrls ?? const [],
           qualifications: initialProfile?.taskerProfile?.qualifications ?? const [],
           primaryCity: initialProfile?.taskerProfile?.primaryCity ?? '',
@@ -90,7 +93,10 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
     ProRegistrationPortfolioUpdated event,
     Emitter<ProRegistrationState> emit,
   ) {
-    emit(state.copyWith(portfolioUrls: event.portfolioUrls));
+    emit(state.copyWith(
+      portfolioItems: event.portfolioItems,
+      portfolioUrls: event.portfolioItems.map((e) => e.url).toList(),
+    ));
   }
 
   void _onQualificationAdded(
@@ -151,6 +157,7 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
         'ecocash_number': state.ecocashNumber,
         'id_document_urls': state.idDocumentUrls,
         'profession_ids': state.professionIds,
+        'portfolio_items': state.portfolioItems.map((e) => e.toJson()).toList(),
         'portfolio_urls': state.portfolioUrls,
         'qualifications': state.qualifications.map((q) => q.toJson()).toList(),
         'primary_city': state.primaryCity,
@@ -181,7 +188,7 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
     } catch (e) {
       emit(state.copyWith(
         status: ProRegistrationStatus.failure,
-        errorMessage: e.toString(),
+        errorMessage: ErrorHandler.getUserFriendlyMessage(e),
       ));
     }
   }

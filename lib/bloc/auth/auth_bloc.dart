@@ -10,6 +10,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 import '../../config/env.dart';
+import '../../core/error_handler.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ApiService _apiService = getIt<ApiService>();
@@ -99,11 +100,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthUnauthenticated());
       }
     } catch (e) {
-      String message = e.toString();
-      if (e is ApiException) {
-        message = e.userFriendlyMessage;
-      }
-      emit(AuthError('Login failed: $message'));
+      emit(AuthError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -130,11 +127,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthUnauthenticated());
       }
     } catch (e) {
-      String message = e.toString();
-      if (e is ApiException) {
-        message = e.userFriendlyMessage;
-      }
-      emit(AuthError('Registration failed: $message'));
+      emit(AuthError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -210,34 +203,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       print('AuthBloc: Google login exception: $e');
+      final message = ErrorHandler.getUserFriendlyMessage(e);
       
-      String message = e.toString();
-
-      // Handle ApiException specifically to avoid verbose toString()
-      if (e is ApiException) {
-        message = e.message;
-      } else if (message.startsWith("Exception: ")) {
-        message = message.substring(11);
+      // If the message is just generic "Sign-in cancelled", don't show an error state if we can avoid it.
+      // But for AuthError, we usually want to show it.
+      if (message.contains('cancelled') || message.contains('Sign-in cancelled')) {
+         emit(AuthUnauthenticated());
+      } else {
+         emit(AuthError(message));
       }
-      
-      // Handle user cancellation gracefully
-      if (message.toLowerCase().contains('canceled') || message.toLowerCase().contains('cancelled')) {
-        print('AuthBloc: Google Sign-In cancelled by user (exception)');
-        emit(AuthUnauthenticated());
-        return;
-      }
-      
-      // If we get "reauth failed" (often status code 16 or 12501), advise the user
-      if (message.contains('16') || message.contains('12501')) {
-        message = 'Sign-in cancelled or failed. Please check your Google Play Services.';
-      }
-
-      // Final cleanup of any verbose prefixes if they slipped through
-      if (message.contains("ApiException:")) {
-        message = "Unable to sign in with Google. Please check your connection.";
-      }
-
-      emit(AuthError(message));
     }
   }
 
@@ -257,11 +231,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _apiService.forgotPassword(event.email);
       emit(AuthForgotPasswordSuccess());
     } catch (e) {
-      String message = e.toString();
-      if (e is ApiException) {
-        message = e.userFriendlyMessage;
-      }
-      emit(AuthForgotPasswordError(message));
+      emit(AuthForgotPasswordError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -278,11 +248,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       emit(AuthResetPasswordSuccess());
     } catch (e) {
-      String message = e.toString();
-      if (e is ApiException) {
-        message = e.userFriendlyMessage;
-      }
-      emit(AuthResetPasswordError(message));
+      emit(AuthResetPasswordError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }

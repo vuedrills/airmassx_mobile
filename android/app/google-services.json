@@ -7,18 +7,34 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:109180723972:android:637c6d475177f3ab3b2651",
+        "mobilesdk_app_id": "1:109180723972:android:ca78a725061da0573b2651",
         "android_client_info": {
-          "package_name": "com.airmassxpress.com"
+          "package_name": "com.airmassxpress.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "109180723972-82embnolehbsjv59q7hjfj1sq120qoo3.apps.googleusercontent.com",
+          "client_id": "109180723972-6rit6tdru1h0v07anbvmfahllchj62p9.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.airmassxpress.com",
+            "package_name": "com.airmassxpress.app",
             "certificate_hash": "f70424ab5f77f15dfd432dcd1639c3bb030d4d6a"
+          }
+        },
+        {
+          "client_id": "109180723972-bppmb35cdrdl0id15gua3f7pcitn94uh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.airmassxpress.app",
+            "certificate_hash": "06e054b00855ee89b8252e41c54fc9c0d74c1c9c"
+          }
+        },
+        {
+          "client_id": "109180723972-oirda2v46q1k7cp9jv0lmimuck3ahqkc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.airmassxpress.app",
+            "certificate_hash": "7db556e2db868ee236d617e705db4a4a883744d4"
           }
         },
         {
@@ -42,7 +58,7 @@
               "client_id": "109180723972-do0cr7ciniud9o93md67u47kh9hk9lf1.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.airmassxpress.app"
+                "bundle_id": "com.airmassxpress.com"
               }
             }
           ]

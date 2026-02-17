@@ -144,10 +144,10 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
                         centerTitle: false,
                         floating: true,
                         pinned: true,
-                        expandedHeight: 250,
+                        expandedHeight: 265,
                         flexibleSpace: FlexibleSpaceBar(
                           background: Container(
-                            padding: const EdgeInsets.only(top: 105),
+                            padding: const EdgeInsets.only(top: 100),
                             child: _buildBalanceCard(),
                           ),
                         ),
@@ -238,7 +238,7 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
   Widget _buildBalanceCard() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,

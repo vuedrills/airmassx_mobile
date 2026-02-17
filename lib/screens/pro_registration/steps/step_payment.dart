@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -321,7 +322,7 @@ class _StepPaymentState extends State<StepPayment> with TickerProviderStateMixin
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.verified_outlined, color: AppTheme.primary, size: 20),
+                              Icon(LucideIcons.shieldCheck, color: AppTheme.success, size: 20),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../models/portfolio_item.dart';
 
 import '../../bloc/profile/profile_bloc.dart';
 import '../../bloc/profile/profile_event.dart';
@@ -168,8 +172,8 @@ class _ProProfileManagementViewState extends State<_ProProfileManagementView> wi
                               context,
                               title: 'ID Documents',
                               subtitle: state.idDocumentUrls.isNotEmpty ? 'Verified ✓' : 'Add verification documents',
-                              icon: Icons.verified_user_outlined,
-                              accentColor: Colors.blue,
+                              icon: LucideIcons.shieldCheck,
+                              accentColor: AppTheme.success,
                               onTap: () => _showIdentityDetail(context, state),
                             ),
                           ]),
@@ -388,7 +392,7 @@ class _ProProfileManagementViewState extends State<_ProProfileManagementView> wi
     switch (status) {
       case 'approved':
         color = AppTheme.success;
-        icon = Icons.verified;
+        icon = LucideIcons.shieldCheck;
         title = 'Approved Professional';
         message = 'Your profile is active and public.';
         break;
@@ -564,47 +568,90 @@ class _ProProfileManagementViewState extends State<_ProProfileManagementView> wi
                 'Work Showcase',
                 style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, color: AppTheme.navy),
               ),
-              IconButton(
-                onPressed: () => _addPortfolioImage(context),
-                icon: const Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary, size: 22),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _addPortfolioLink(context),
+                    icon: const Icon(Icons.link_outlined, color: AppTheme.primary, size: 22),
+                    tooltip: 'Add Link',
+                  ),
+                  IconButton(
+                    onPressed: () => _addPortfolioImage(context),
+                    icon: const Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary, size: 22),
+                    tooltip: 'Add Image',
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 12),
-          if (state.portfolioUrls.isEmpty)
+          if (state.portfolioItems.isEmpty)
              Text(
-               'No photos added yet. Showcase your work to attract more clients.',
+               'No items added yet. Showcase your work or add links to your profiles.',
                style: TextStyle(color: Colors.grey[500], fontSize: 12, fontStyle: FontStyle.italic),
              )
           else
             SizedBox(
-              height: 100,
+              height: 120,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: state.portfolioUrls.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                itemCount: state.portfolioItems.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
+                  final item = state.portfolioItems[index];
+                  final isLink = item.type == 'link';
+
                   return Stack(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(state.portfolioUrls[index], width: 100, height: 100, fit: BoxFit.cover),
+                      Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          color: AppTheme.neutral100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.neutral200),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: isLink
+                            ? _buildLinkItemPreview(item)
+                            : Image.network(
+                                item.url,
+                                width: 110,
+                                height: 110,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                        ),
                       ),
                       Positioned(
                         top: 4,
                         right: 4,
                         child: GestureDetector(
                           onTap: () {
-                            final urls = List<String>.from(state.portfolioUrls)..removeAt(index);
-                            context.read<ProRegistrationBloc>().add(ProRegistrationPortfolioUpdated(urls));
+                            final items = List<PortfolioItem>.from(state.portfolioItems)..removeAt(index);
+                            context.read<ProRegistrationBloc>().add(ProRegistrationPortfolioUpdated(items));
                           },
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, size: 10, color: Colors.white),
+                            child: const Icon(Icons.close, size: 12, color: Colors.white),
                           ),
                         ),
                       ),
+                      if (isLink)
+                        Positioned(
+                          bottom: 4,
+                          left: 4,
+                          child: GestureDetector(
+                            onTap: () => _launchURL(item.url),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), shape: BoxShape.circle),
+                              child: const Icon(Icons.open_in_new, size: 12, color: AppTheme.primary),
+                            ),
+                          ),
+                        ),
                     ],
                   );
                 },
@@ -613,6 +660,51 @@ class _ProProfileManagementViewState extends State<_ProProfileManagementView> wi
         ],
       ),
     );
+  }
+
+  Widget _buildLinkItemPreview(PortfolioItem item) {
+    IconData icon = Icons.link;
+    Color color = Colors.grey;
+    final url = item.url;
+
+    if (url.contains('github.com')) {
+      icon = Icons.code;
+      color = Colors.black;
+    } else if (url.contains('behance.net')) {
+      icon = Icons.brush;
+      color = Colors.blue;
+    } else if (url.contains('dribbble.com')) {
+      icon = Icons.sports_basketball;
+      color = Colors.pink;
+    } else if (url.contains('linkedin.com')) {
+      icon = Icons.work;
+      color = Colors.blue[800]!;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 24, color: color),
+          const SizedBox(height: 4),
+          Text(
+            item.title,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.navy),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $url');
+    }
   }
 
   void _showIdentityDetail(BuildContext context, ProRegistrationState state) {
@@ -993,13 +1085,122 @@ class _ProProfileManagementViewState extends State<_ProProfileManagementView> wi
     try {
       final url = await getIt<ApiService>().uploadTaskerFile(File(image.path), 'portfolio');
       if (!context.mounted) return;
-      final currentUrls = List<String>.from(context.read<ProRegistrationBloc>().state.portfolioUrls);
-      currentUrls.add(url);
-      context.read<ProRegistrationBloc>().add(ProRegistrationPortfolioUpdated(currentUrls));
+      final bloc = context.read<ProRegistrationBloc>();
+      final currentItems = List<PortfolioItem>.from(bloc.state.portfolioItems);
+      
+      final newItem = PortfolioItem(
+        title: 'Work Sample ${currentItems.length + 1}',
+        url: url,
+        type: 'image', // Explicitly set as image
+      );
+      
+      bloc.add(ProRegistrationPortfolioUpdated([...currentItems, newItem]));
     } catch (e) {
       if (!context.mounted) return;
       UIUtils.showSnackBar(context, 'Upload failed', isError: true);
     }
+  }
+
+  void _addPortfolioLink(BuildContext context) {
+    final urlController = TextEditingController();
+    final titleController = TextEditingController();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(modalContext).viewInsets.bottom,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add Portfolio Link',
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text('Project Title', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. My Website',
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('URL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: urlController,
+                    decoration: InputDecoration(
+                      hintText: 'https://...',
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
+                    ),
+                    keyboardType: TextInputType.url,
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final url = urlController.text.trim();
+                        final title = titleController.text.trim();
+                        if (url.isNotEmpty && title.isNotEmpty) {
+                          final bloc = context.read<ProRegistrationBloc>();
+                          final currentItems = List<PortfolioItem>.from(bloc.state.portfolioItems);
+                          final newItem = PortfolioItem(
+                            title: title, 
+                            url: url, 
+                            type: 'link', // Explicitly set as link
+                          );
+                          bloc.add(ProRegistrationPortfolioUpdated([...currentItems, newItem]));
+                          Navigator.pop(modalContext);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
+                      child: const Text('Add Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showQualificationsForm(BuildContext parentContext) {

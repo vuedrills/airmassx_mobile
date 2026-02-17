@@ -164,7 +164,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       // Reload profile to ensure consistency
       add(LoadProfile());
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
       // Restore previous state if possible (reload)
       add(LoadProfile());
     }
@@ -190,7 +190,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           notificationSettings: currentState.notificationSettings,
         ));
       } catch (e) {
-        emit(ProfileError(e.toString()));
+        emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
       }
     }
   }
@@ -208,7 +208,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           notificationSettings: event.settings,
         ));
       } catch (e) {
-        emit(ProfileError(e.toString()));
+        emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
       }
     }
   }
@@ -307,7 +307,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final transactions = await _apiService.getPaymentHistory();
       emit(PaymentHistoryLoaded(transactions));
     } catch (e) {
-      emit(ProfileError(e.toString()));
+      emit(ProfileError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }

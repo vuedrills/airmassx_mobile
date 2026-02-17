@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
 import '../../core/service_locator.dart';
+import '../../core/error_handler.dart';
 import 'offer_event.dart';
 import 'offer_state.dart';
 
@@ -63,11 +64,10 @@ class OfferBloc extends Bloc<OfferEvent, OfferState> {
       );
       emit(state.copyWith(status: OfferStatus.success));
     } catch (e) {
-      String message = e.toString().replaceAll('Exception: ', '');
+      String message = ErrorHandler.getUserFriendlyMessage(e);
       String? code;
       
       if (e is ApiException) {
-        message = e.message;
         code = e.code;
       }
       

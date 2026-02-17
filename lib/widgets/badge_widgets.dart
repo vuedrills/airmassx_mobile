@@ -44,11 +44,11 @@ class BadgeIcon extends StatelessWidget {
   IconData _getIcon() {
     switch (badgeId) {
       case BadgeIds.idVerified:
-        return Icons.verified_user;
+        return LucideIcons.shieldCheck;
       case BadgeIds.artisan:
         return Icons.construction;
       case BadgeIds.professional:
-        return LucideIcons.badgeCheck;
+        return LucideIcons.shieldCheck;
       case BadgeIds.certified:
         return Icons.military_tech;
       default:
@@ -59,7 +59,7 @@ class BadgeIcon extends StatelessWidget {
   Color _getColor() {
     switch (badgeId) {
       case BadgeIds.idVerified:
-        return const Color(0xFF10B981); // Green
+        return AppTheme.success; // Emerald Green
       case BadgeIds.artisan:
         return const Color(0xFFF59E0B); // Amber
       case BadgeIds.professional:

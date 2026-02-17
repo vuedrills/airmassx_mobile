@@ -43,8 +43,8 @@ class AppTheme {
   static const Color black = Color(0xFF000000);
 
   // Semantic Colors
-  static const Color success = Color(0xFF2E4A6F); // Brand Navy Light
-  static const Color successLight = Color(0xFFE8EBF0); // Brand Navy Soft
+  static const Color success = Color(0xFF10B981); // Emerald Green
+  static const Color successLight = Color(0xFFDCFCE7); // Light Green
   static const Color warning = Color(0xFFFFB400);
   static const Color warningLight = Color(0xFFFFF6E0);
   static const Color error = Color(0xFFC04433); // Professional Muted Red

@@ -84,6 +84,11 @@ class UserAvatar extends StatelessWidget {
           topBadgeId = BadgeIds.artisan;
         }
       }
+
+      // 3. Last fallback: if user isVerified but has no higher tier badge, show ID verified badge
+      if (topBadgeId == null && isVerified) {
+        topBadgeId = BadgeIds.idVerified;
+      }
     }
 
     return Stack(

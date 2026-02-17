@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -323,7 +324,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             const SizedBox(height: 20),
 
             // Professional Banner
-            if (!(profile.isVerified && profile.taskerProfile?.status == 'approved'))
+            if (!profile.isProfessional)
               FadeTransition(
                 opacity: _fadeAnimations[3],
                 child: SlideTransition(
@@ -331,7 +332,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   child: _buildProUpgradeBanner(
                     context,
                     profile.taskerProfile?.status ?? profile.verificationType,
+                    isPro: profile.taskerProfile?.bio != null && profile.taskerProfile!.bio!.isNotEmpty,
                   ),
+                ),
+              ),
+
+            // Client Verification Banner (Yellow/Amber)
+            if (!profile.isVerified && !profile.isProfessional)
+              FadeTransition(
+                opacity: _fadeAnimations[3],
+                child: SlideTransition(
+                  position: _slideAnimations[3],
+                  child: _buildClientVerificationBanner(context, profile),
                 ),
               ),
 
@@ -369,14 +381,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             const SizedBox(height: 10),
             _buildCompactOption(
               context,
-              title: (profile.isProfessional || profile.isProfessionalPending) ? 'Professional Profile' : 'Verification',
+              title: profile.isProfessional ? 'Professional Profile' : 'Verification',
               subtitle: _getVerificationStatus(profile),
-              icon: Icons.verified_user_outlined,
+              icon: LucideIcons.badgeCheck,
               accentColor: _getVerificationColor(profile),
               onTap: () {
-                if (profile.isProfessional || profile.isProfessionalPending) {
+                final bool isProApplying = profile.taskerProfile?.bio != null && profile.taskerProfile!.bio!.isNotEmpty;
+                if (profile.isProfessional || (profile.isTasker && isProApplying)) {
                   context.push('/profile/pro-profile');
-                } else if (!profile.isVerified && profile.verificationType == 'pending_review') {
+                } else if (!profile.isVerified && (profile.verificationType == 'pending_review' || profile.taskerProfile?.status == 'pending_review')) {
                   UIUtils.showSnackBar(context, 'Your identity verification is currently under review.', isError: false);
                 } else {
                   context.push('/profile/onboarding');
@@ -625,7 +638,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             child: _buildStatItem(
               '${(profile.completionRate.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%',
               'Completion',
-              Icons.check_circle_rounded,
+              LucideIcons.checkCircle2,
               AppTheme.success,
             ),
           ),
@@ -638,7 +651,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             child: _buildStatItem(
               '${profile.completedTasks}',
               'Tasks Done',
-              Icons.task_alt_rounded,
+              LucideIcons.clipboardCheck,
               AppTheme.navy,
             ),
           ),
@@ -651,7 +664,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             child: _buildStatItem(
               '\$${profile.totalEarnings.toStringAsFixed(0)}',
               'Earned',
-              Icons.attach_money_rounded,
+              LucideIcons.dollarSign,
               AppTheme.warning,
             ),
           ),
@@ -694,7 +707,88 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildProUpgradeBanner(BuildContext context, String? status) {
+  Widget _buildClientVerificationBanner(BuildContext context, dynamic profile) {
+    // Current status of ID verification
+    final String? status = profile.taskerProfile?.status ?? profile.verificationType;
+    final bool isPending = status == 'pending_review';
+
+    if (isPending) return const SizedBox.shrink(); // Don't show if already pending
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () => context.push('/profile/onboarding'),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFF59E0B), Color(0xFFD97706)], // Amber/Gold Gradient
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFF59E0B).withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(LucideIcons.shieldCheck, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Get ID Verified',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Build trust and increase your credibility as a member.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.95),
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProUpgradeBanner(BuildContext context, String? status, {bool isPro = true}) {
     String title = 'Become a Professional';
     String subtitle = 'Earn money by completing tasks with your skills.';
     IconData icon = Icons.stars_rounded;
@@ -702,10 +796,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     String buttonText = 'Apply Now';
 
     if (status == 'pending_review') {
-      title = 'Application Pending';
-      subtitle = 'We are currently reviewing your professional profile.';
+      title = isPro ? 'Application Pending' : 'ID Review Pending';
+      subtitle = isPro 
+        ? 'We are currently reviewing your professional profile.'
+        : 'Your ID is being verified. You can become a pro after this.';
       icon = Icons.hourglass_empty;
-      showButton = false;
+      showButton = isPro ? false : true; // Allow them to continue to Pro registration if just ID is pending? 
+      // Actually, if it's just ID pending, maybe allow them to START the pro registration.
+      if (!isPro) buttonText = 'Continue to Pro Setup';
     } else if (status == 'in_progress') {
       title = 'Complete Your Setup';
       subtitle = 'Finish your professional registration to start earning.';
@@ -714,7 +812,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     } else if (status == 'approved') {
       title = 'Professional Status: Approved';
       subtitle = 'You are a verified professional on Airmass Xpress.';
-      icon = Icons.verified_user;
+      icon = LucideIcons.shieldCheck;
       showButton = false;
     }
 
@@ -1022,8 +1120,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   String _getVerificationStatus(profile) {
-    if (profile.isVerified || profile.taskerProfile?.status == 'approved') return 'Verified ✓';
-    if (profile.verificationType == 'pending_review' || profile.taskerProfile?.status == 'pending_review') return 'Under review...';
+    if (profile.isProfessional) return 'Professional Verified ✓';
+    if (profile.isIdVerifiedOnly) return 'ID Verified ✓';
+    
+    // Check if it's a professional application or just ID verification
+    final bool isProApplying = profile.taskerProfile?.bio != null && profile.taskerProfile!.bio!.isNotEmpty;
+    
+    if (profile.verificationType == 'pending_review' || profile.taskerProfile?.status == 'pending_review') {
+      return isProApplying ? 'Reviewing Pro Profile...' : 'Reviewing ID...';
+    }
     return 'Action required';
   }
 

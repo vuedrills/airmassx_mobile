@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/user.dart';
 import '../../config/theme.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../widgets/badge_widgets.dart';
 import '../invoice/request_quote_screen.dart';
 import 'reviews_screen.dart';
@@ -11,6 +13,7 @@ import '../../core/service_locator.dart';
 import '../../widgets/user_avatar.dart';
 import '../../models/review.dart';
 import '../../models/profession.dart';
+import '../../models/portfolio_item.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final User user;
@@ -154,7 +157,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: widget.showRequestQuoteButton ? _buildBottomBar(context) : null,
+      bottomNavigationBar: null, // widget.showRequestQuoteButton ? _buildBottomBar(context) : null,
     );
   }
 
@@ -485,7 +488,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   Widget _buildVerifiedInfo(BuildContext context) {
     final verifiedProfessions = <String>[];
-    if (_user.isVerified && _user.taskerProfile != null) {
+    if (_user.isVerified && _user.isProfessional) {
       for (final id in _user.taskerProfile!.professionIds) {
         final prof = _allProfessions.firstWhere(
           (p) => p.id == id,
@@ -510,17 +513,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           const SizedBox(height: 16),
           _buildVerificationItem(
             context,
-            Icons.verified_user,
-            _user.verificationType ?? 'ID Verified',
+            LucideIcons.shieldCheck,
+            _user.isProfessional ? 'Professional Verified' : 'Identity Verified',
             _user.isVerified,
+            color: _user.isProfessional ? const Color(0xFF3B82F6) : AppTheme.success,
           ),
           if (verifiedProfessions.isNotEmpty) ...[
             const SizedBox(height: 12),
             ...verifiedProfessions.map((name) => _buildVerificationItem(
                   context,
-                  Icons.business_center,
+                  LucideIcons.shieldCheck,
                   'Verified $name',
                   true,
+                  color: const Color(0xFF3B82F6),
                 )),
           ],
         ],
@@ -528,7 +533,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  Widget _buildVerificationItem(BuildContext context, IconData icon, String title, bool isCompleted) {
+  Widget _buildVerificationItem(BuildContext context, IconData icon, String title, bool isCompleted, {Color? color}) {
+    final itemColor = color ?? (isCompleted ? AppTheme.success : AppTheme.neutral400);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -540,7 +546,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isCompleted ? AppTheme.success : AppTheme.neutral400,
+              color: itemColor,
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: Colors.white, size: 20),
@@ -560,7 +566,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           ),
           const SizedBox(width: 8),
           if (isCompleted)
-            const Icon(Icons.check_circle, color: AppTheme.success, size: 20)
+            Icon(Icons.check_circle, color: itemColor, size: 20)
           else
             const Icon(Icons.info_outline, color: AppTheme.neutral400, size: 20),
         ],
@@ -652,39 +658,95 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           ),
         ),
         SizedBox(
-          height: 200,
+          height: 220,
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: _user.portfolio.length,
             itemBuilder: (context, index) {
               final item = _user.portfolio[index];
+              final bool isLink = item.type == 'link';
+
               return Container(
-                width: 200,
+                width: 240,
                 margin: const EdgeInsets.symmetric(horizontal: 8),
-                child: GestureDetector(
-                  onTap: () => _showFullScreenImage(context, item.imageUrl),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: item.imageUrl,
-                      height: 200,
-                      width: 200,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        height: 200,
-                        width: 200,
-                        color: Colors.grey[200],
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        height: 200,
-                        width: 200,
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (isLink) {
+                            _launchURL(item.url);
+                          } else {
+                            _showFullScreenImage(context, item.url);
+                          }
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: isLink 
+                              ? _buildLinkPlaceholder(item)
+                              : CachedNetworkImage(
+                                  imageUrl: item.url,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  placeholder: (context, url) => Container(
+                                    color: Colors.grey[100],
+                                    child: const Center(child: CircularProgressIndicator()),
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                    color: Colors.grey[100],
+                                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                                  ),
+                                ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: AppTheme.navy,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (isLink) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              item.url.replaceFirst(RegExp(r'https?://(www\.)?'), ''),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue[700],
+                                decoration: TextDecoration.underline,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -693,6 +755,93 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         const SizedBox(height: 24),
       ],
     );
+  }
+
+  Widget _buildLinkPlaceholder(PortfolioItem item) {
+    IconData icon = Icons.link_rounded;
+    Color color = AppTheme.primary;
+    String host = '';
+    
+    try {
+      final uri = Uri.parse(item.url);
+      host = uri.host;
+      if (host.contains('github.com')) {
+        icon = Icons.code_rounded;
+        color = Colors.black;
+      } else if (host.contains('behance.net')) {
+        icon = Icons.brush_rounded;
+        color = Colors.blue;
+      } else if (host.contains('dribbble.com')) {
+        icon = Icons.sports_basketball_rounded;
+        color = Colors.pink;
+      } else if (host.contains('linkedin.com')) {
+        icon = Icons.work_rounded;
+        color = Colors.blue[800]!;
+      }
+    } catch (_) {}
+
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 48, color: color),
+              ),
+              const SizedBox(height: 12),
+              if (host.isNotEmpty)
+                Text(
+                  host.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+            ],
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              child: Icon(Icons.open_in_new_rounded, size: 14, color: Colors.blue[700]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch $url')),
+        );
+      }
+    }
   }
 
   Widget _buildReviewsSection(BuildContext context) {

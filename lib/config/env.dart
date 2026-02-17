@@ -35,8 +35,8 @@ class AppConfig {
         if (Platform.isAndroid) {
           return 'http://10.0.2.2:8080/api/v1';
         }
-        // Use local IP for iOS Simulator/Device to avoid connection refused
-        return 'http://192.168.1.239:8080/api/v1'; 
+        // Use localhost for iOS Simulator. Update IP if testing on Physical Device.
+        return 'http://localhost:8080/api/v1'; // fallback IP was: 192.168.24.174
     }
   }
   
@@ -53,14 +53,14 @@ class AppConfig {
         if (Platform.isAndroid) {
           return 'http://10.0.2.2:8080';
         }
-        // Use local IP for iOS Simulator/Device
-        return 'http://192.168.1.239:8080'; 
+        // Use localhost for iOS Simulator. Update IP if testing on Physical Device.
+        return 'http://localhost:8080'; // fallback IP was: 192.168.24.174
     }
   }
 
   // Sentry DSN
   String get sentryDsn {
-    return 'https://788e7a7e1f98018a13a7c6f0920400c4@o4508711466074112.ingest.us.sentry.io/4508742517817344';
+    return 'https://f95eaf1e713b068687be7c1509c7a2e7@o4510872956829696.ingest.us.sentry.io/4510872966004736';
   }
 
   // AdMob App ID (Android) - FOUND IN: android/app/src/main/AndroidManifest.xml

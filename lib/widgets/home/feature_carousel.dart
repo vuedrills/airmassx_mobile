@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../config/theme.dart';
@@ -38,12 +39,12 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
         'subtitle': 'Verified experts ready to help',
         'button': 'Consult a Pro',
         'colors': [const Color(0xFFA42444), const Color(0xFFC93D5E)],
-        'icon': Icons.verified_user_outlined,
+        'icon': LucideIcons.shieldCheck,
         'action': 'app://create-project',
       },
       {
         'title': 'Solar Deals',
-        'subtitle': 'Save on renewable energy',
+        'subtitle': 'Get equipment for your site',
         'button': 'Request Equipment',
         'colors': [const Color(0xFF0A5C36), const Color(0xFF0D7A48)],
         'icon': Icons.solar_power_outlined,
@@ -53,19 +54,28 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
         'title': 'Construction Experts',
         'subtitle': 'Build your dream project',
         'button': 'Find a Contractor',
-        'colors': [const Color(0xFF333333), const Color(0xFF555555)],
+        'colors': [const Color(0xFFEAA300), const Color(0xFFC48200)],
         'icon': Icons.engineering_outlined,
-        'action': 'app://create-task',
+        'action': 'app://create-project',
       },
     ];
   }
 
   List<dynamic> get _features {
+    final defaults = _getDefaultFeatures();
+    final List<dynamic> combinedFeatures = List.from(defaults);
+
     if (widget.ads != null && widget.ads!.isNotEmpty) {
       final bannerAds = widget.ads!.where((ad) => ad.placement == 'notice_board').toList();
-      if (bannerAds.isNotEmpty) return bannerAds;
+      
+      // Merge ads into the defaults based on index
+      for (int i = 0; i < combinedFeatures.length; i++) {
+        if (i < bannerAds.length) {
+          combinedFeatures[i] = bannerAds[i];
+        }
+      }
     }
-    return _getDefaultFeatures();
+    return combinedFeatures;
   }
 
   @override
@@ -83,8 +93,11 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
 
   int _getInitialIndex() {
     final features = _features;
-    // If we have ads, start at 0. If defaults, start at tabIndex.
-    if (features.isNotEmpty && features.first is Ad) return 0;
+    // If we have ads, default to tabIndex (assuming 1:1 mapping is desired) 
+    // or start at 0? The original logic was strict:
+    // "If we have ads, start at 0. If defaults, start at tabIndex."
+    // But since we are enforcing context per tab, we should respect tabIndex even for Ads
+    // provided the list represents the tabs.
     if (widget.tabIndex < features.length) return widget.tabIndex;
     return 0;
   }
@@ -94,15 +107,13 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tabIndex != widget.tabIndex) {
       final features = _features;
-      // Only auto-scroll for default features (ads don't change by tab)
-      if (features.isNotEmpty && features.first is! Ad) {
-        if (widget.tabIndex < features.length) {
-          _pageController.animateToPage(
-            widget.tabIndex,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeInOutCubic,
-          );
-        }
+      // Scroll to the index matching the tab
+      if (widget.tabIndex < features.length) {
+        _pageController.animateToPage(
+          widget.tabIndex,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOutCubic,
+        );
       }
     }
   }
@@ -115,13 +126,22 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
     }
   }
 
-  void _onAction(dynamic feature) {
+  void _onAction(dynamic feature, String? overrideAction) {
     String urlString;
-    if (feature is Ad) {
-      getIt<ApiService>().trackAdClick(feature.id);
-      urlString = feature.actionUrl;
+    
+    // Use override action if provided
+    if (overrideAction != null) {
+      urlString = overrideAction;
+      if (feature is Ad) {
+         getIt<ApiService>().trackAdClick(feature.id);
+      }
     } else {
-      urlString = feature['action'] ?? 'app://create-task';
+      if (feature is Ad) {
+        getIt<ApiService>().trackAdClick(feature.id);
+        urlString = feature.actionUrl;
+      } else {
+        urlString = feature['action'] ?? 'app://create-task';
+      }
     }
     
     // Handle internal app links
@@ -137,14 +157,14 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
          Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PostProjectScreen(),
+            builder: (_) => const PostProjectScreen(),
           ),
         );
       } else if (urlString == 'app://create-equipment-request') {
          Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PostEquipmentRequestScreen(),
+            builder: (_) => const PostEquipmentRequestScreen(),
           ),
         );
       }
@@ -170,9 +190,31 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
     }
   }
 
+  // Get contextual button config based on index
+  Map<String, String>? _getOverrideConfig(int index) {
+    switch (index) {
+      case 0: // Trades
+        return {'text': 'Post a Task', 'action': 'app://create-task'};
+      case 1: // Professional
+        return {'text': 'Consult a Pro', 'action': 'app://create-task'};
+      case 2: // Equipment
+        return {'text': 'Request Equipment', 'action': 'app://create-equipment-request'};
+      case 3: // Contractors
+        return {'text': 'Find a Contractor', 'action': 'app://create-project'};
+      default:
+        return null; // No override for extra indices
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final features = _features;
+    // Safety check just in case
+    if (features.isEmpty) return const SizedBox.shrink();
+    
+    // Ensure current index is valid
+    if (_currentIndex >= features.length) _currentIndex = 0;
+
     final currentFeature = features[_currentIndex];
     final bool isAd = currentFeature is Ad;
     
@@ -220,9 +262,19 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
               final feature = features[index];
               final bool itemIsAd = feature is Ad;
               
+              // Apply overrides based on index
+              final overrideConfig = _getOverrideConfig(index);
+              
               final String title = itemIsAd ? feature.title : feature['title'];
               final String subtitle = itemIsAd ? feature.description : feature['subtitle'];
-              final String buttonText = itemIsAd ? feature.buttonText : feature['button'];
+              
+              // Use override text if available, otherwise original
+              final String buttonText = overrideConfig?['text'] ?? 
+                  (itemIsAd ? feature.buttonText : feature['button']);
+              
+              // Use override action if available
+              final String? actionUrl = overrideConfig?['action'];
+              
               final IconData icon = itemIsAd ? Icons.campaign_outlined : feature['icon'];
               final Color btnTextColor = itemIsAd 
                   ? _hexToColor(feature.backgroundColor) 
@@ -292,7 +344,7 @@ class _FeatureCarouselState extends State<FeatureCarousel> {
                           SizedBox(
                             height: 28,
                             child: ElevatedButton(
-                              onPressed: () => _onAction(feature),
+                              onPressed: () => _onAction(feature, actionUrl),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: btnTextColor,

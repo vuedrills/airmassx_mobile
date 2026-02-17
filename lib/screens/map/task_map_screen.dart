@@ -86,6 +86,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
       final apiService = getIt<ApiService>();
       final categories = await apiService.getCategories();
       print('TaskMapScreen: Loaded ${categories.length} categories');
+      if (!mounted) return;
       setState(() {
         _categories = categories;
       });
@@ -95,6 +96,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
   }
 
   Future<void> _loadTasks() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final apiService = getIt<ApiService>();
@@ -104,6 +106,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
         limit: 100, 
       );
       
+      if (!mounted) return;
       setState(() {
         _tasks = tasks;
         _filteredTasks = _applyFilter(tasks);
@@ -113,7 +116,9 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
       _geocodeTasksWithoutCoordinates();
     } catch (e) {
       print('Error loading tasks: $e');
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -163,9 +168,10 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
       if (task.locationLat == null || task.locationLng == null) {
         // Check cache first
         if (!_geocodedLocations.containsKey(task.id)) {
+          if (!mounted) return;
           try {
             final results = await _geocodingService.searchPlaces(task.locationAddress);
-            if (results.isNotEmpty) {
+            if (results.isNotEmpty && mounted) {
               setState(() {
                 _geocodedLocations[task.id] = LatLng(results.first.lat, results.first.lng);
               });
@@ -174,6 +180,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
             print('Failed to geocode task ${task.id}: $e');
           }
           // Small delay to avoid rate limiting
+          if (!mounted) return;
           await Future.delayed(const Duration(milliseconds: 200));
         }
       }
@@ -436,6 +443,25 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
     final professionals = _moveOtherToEnd(professionalsRaw);
     final equipment = _moveOtherToEnd(equipmentRaw);
 
+    final Set<String> seenNames = {};
+
+    List<DropdownMenuItem<String>> buildItems(List<Category> categories) {
+      final List<DropdownMenuItem<String>> items = [];
+      for (final c in categories) {
+        if (!seenNames.contains(c.name)) {
+          seenNames.add(c.name);
+          items.add(DropdownMenuItem(
+            value: c.name,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: Text(c.name),
+            ),
+          ));
+        }
+      }
+      return items;
+    }
+
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -480,13 +506,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
                   ),
                 ),
               ),
-              ...trades.map((c) => DropdownMenuItem(
-                value: c.name,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(c.name),
-                ),
-              )),
+              ...buildItems(trades),
             ],
 
             if (professionals.isNotEmpty) ...[
@@ -501,13 +521,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
                   ),
                 ),
               ),
-              ...professionals.map((c) => DropdownMenuItem(
-                value: c.name,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(c.name),
-                ),
-              )),
+              ...buildItems(professionals),
             ],
 
             if (equipment.isNotEmpty) ...[
@@ -522,13 +536,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
                   ),
                 ),
               ),
-              ...equipment.map((c) => DropdownMenuItem(
-                value: c.name,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(c.name),
-                ),
-              )),
+              ...buildItems(equipment),
             ],
           ],
         ),

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../models/portfolio_item.dart';
 import '../../models/tasker_profile.dart';
 
 enum ProRegistrationStatus { initial, loading, success, failure }
@@ -22,6 +23,7 @@ class ProRegistrationState extends Equatable {
   final List<String> professionIds;
 
   // Step 4: Portfolio
+  final List<PortfolioItem> portfolioItems;
   final List<String> portfolioUrls;
 
   // Step 5: Qualifications
@@ -48,6 +50,7 @@ class ProRegistrationState extends Equatable {
     this.professionalType,
     this.idDocumentUrls = const [],
     this.professionIds = const [],
+    this.portfolioItems = const [],
     this.portfolioUrls = const [],
     this.qualifications = const [],
     this.primaryCity = '',
@@ -69,6 +72,7 @@ class ProRegistrationState extends Equatable {
     String? professionalType,
     List<String>? idDocumentUrls,
     List<String>? professionIds,
+    List<PortfolioItem>? portfolioItems,
     List<String>? portfolioUrls,
     List<Qualification>? qualifications,
     String? primaryCity,
@@ -89,6 +93,7 @@ class ProRegistrationState extends Equatable {
       professionalType: professionalType ?? this.professionalType,
       idDocumentUrls: idDocumentUrls ?? this.idDocumentUrls,
       professionIds: professionIds ?? this.professionIds,
+      portfolioItems: portfolioItems ?? this.portfolioItems,
       portfolioUrls: portfolioUrls ?? this.portfolioUrls,
       qualifications: qualifications ?? this.qualifications,
       primaryCity: primaryCity ?? this.primaryCity,
@@ -135,6 +140,7 @@ class ProRegistrationState extends Equatable {
         professionalType,
         idDocumentUrls,
         professionIds,
+        portfolioItems,
         portfolioUrls,
         qualifications,
         primaryCity,

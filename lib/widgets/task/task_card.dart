@@ -12,6 +12,8 @@ import '../badge_widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_state.dart';
+import '../../models/badge.dart';
+import '../../core/ui_utils.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
@@ -96,7 +98,7 @@ class TaskCard extends StatelessWidget {
                                     color: AppTheme.navy,
                                     height: 1.2,
                                   ),
-                                  maxLines: 2,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -168,114 +170,119 @@ class TaskCard extends StatelessWidget {
                       // Row 4: Footer (Poster Identity + Budget/Counts)
                       Row(
                         children: [
-                          // Poster Info with Rating and Badge
-                          GestureDetector(
-                            onTap: () async {
-                              final apiService = getIt<ApiService>();
-                              try {
-                                final user = await apiService.getUser(task.posterId);
-                                if (user != null && context.mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => PublicProfileScreen(
-                                        user: user,
-                                        showRequestQuoteButton: false,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => PublicProfileScreen(
-                                        user: User(
-                                          id: task.posterId,
-                                          name: task.posterName ?? 'User',
-                                          email: '',
-                                          profileImage: task.posterImage,
-                                          rating: task.posterRating ?? 0,
-                                          isVerified: task.posterVerified ?? false,
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () async {
+                                final apiService = getIt<ApiService>();
+                                try {
+                                  final user = await apiService.getUser(task.posterId);
+                                  if (user != null && context.mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => PublicProfileScreen(
+                                          user: user,
+                                          showRequestQuoteButton: false,
                                         ),
-                                        showRequestQuoteButton: false,
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => PublicProfileScreen(
+                                          user: User(
+                                            id: task.posterId,
+                                            name: task.posterName ?? 'User',
+                                            email: '',
+                                            profileImage: task.posterImage,
+                                            rating: task.posterRating ?? 0,
+                                            isVerified: task.posterVerified ?? false,
+                                          ),
+                                          showRequestQuoteButton: false,
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 }
-                              }
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (task.poster != null)
-                                  UserAvatar.fromUser(task.poster!, radius: 12, showBadge: false)
-                                else
-                                  UserAvatar(
-                                    name: task.posterName ?? 'U',
-                                    profileImage: task.posterImage,
-                                    radius: 12,
-                                    isVerified: task.posterVerified ?? false,
-                                    showBadge: false,
-                                  ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _getFirstName(task.posterName),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                    color: AppTheme.neutral700,
-                                  ),
-                                ),
-                                // Rating
-                                if ((task.posterRating ?? 0) > 0) ...[
-                                  const SizedBox(width: 4),
-                                  const Icon(Icons.star, size: 12, color: Colors.amber),
-                                  Text(
-                                    task.posterRating!.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.neutral600,
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (task.poster != null)
+                                    UserAvatar.fromUser(task.poster!, radius: 12, showBadge: false)
+                                  else
+                                    UserAvatar(
+                                      name: task.posterName ?? 'U',
+                                      profileImage: task.posterImage,
+                                      radius: 12,
+                                      isVerified: task.posterVerified ?? false,
+                                      showBadge: false,
                                     ),
-                                  ),
-                                ] else ...[
-                                  const SizedBox(width: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: Colors.purple.shade50,
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
                                     child: Text(
-                                      'New!',
-                                      style: TextStyle(
-                                        color: Colors.purple.shade700,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 9,
+                                      _getFirstName(task.posterName),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                        color: AppTheme.neutral700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  // Rating
+                                  if ((task.posterRating ?? 0) > 0) ...[
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.star, size: 12, color: Colors.amber),
+                                    Text(
+                                      task.posterRating!.toStringAsFixed(1),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.neutral600,
                                       ),
                                     ),
-                                  ),
+                                  ] else ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: Colors.purple.shade50,
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                      child: Text(
+                                        'New!',
+                                        style: TextStyle(
+                                          color: Colors.purple.shade700,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 9,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  // Dynamic Badges from poster - Limited to 1 to prevent overflow
+                                  if (task.poster != null && task.poster!.badges.isNotEmpty) ...[
+                                    const SizedBox(width: 4),
+                                    BadgeIconRow(
+                                      badges: task.poster!.badges,
+                                      iconSize: 16,
+                                      spacing: -3,
+                                      maxVisible: 1, // Reduced from 2
+                                    ),
+                                  ] else if (task.posterVerified == true) ...[
+                                    // Fallback to verified badge if poster object not available
+                                    const SizedBox(width: 4),
+                                    const BadgeIcon(badgeId: BadgeIds.idVerified, size: 16),
+                                  ],
                                 ],
-                                // Dynamic Badges from poster
-                                if (task.poster != null && task.poster!.badges.isNotEmpty) ...[
-                                  const SizedBox(width: 4),
-                                  BadgeIconRow(
-                                    badges: task.poster!.badges,
-                                    iconSize: 16,
-                                    spacing: -3,
-                                    maxVisible: 2,
-                                  ),
-                                ] else if (task.posterVerified == true) ...[
-                                  // Fallback to verified badge if poster object not available
-                                  const SizedBox(width: 4),
-                                  const Icon(Icons.verified, size: 14, color: AppTheme.primary),
-                                ],
-                              ],
+                              ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           // Counts with "bids" label
                           Row(
                             mainAxisSize: MainAxisSize.min,
@@ -292,17 +299,17 @@ class TaskCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           // Budget
-                          Text(
-                            '\$${task.budget.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
+                              Text(
+                                '\$${UIUtils.formatBudget(task.budget)}',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                          const SizedBox(width: 8),
                           // Place a Bid button (only if open and not own task)
                           BlocBuilder<AuthBloc, AuthState>(
                             builder: (context, authState) {

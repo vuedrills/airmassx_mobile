@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
+import '../../core/error_handler.dart';
 import 'category_event.dart';
 import 'category_state.dart';
 
@@ -21,7 +22,7 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
       final categories = await _apiService.getCategories();
       emit(CategoryLoaded(categories));
     } catch (e) {
-      emit(CategoryError(e.toString()));
+      emit(CategoryError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }

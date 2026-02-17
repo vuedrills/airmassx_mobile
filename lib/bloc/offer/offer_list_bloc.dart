@@ -19,13 +19,7 @@ class OfferListBloc extends Bloc<OfferListEvent, OfferListState> {
       final offers = await _apiService.getOffersForTask(event.taskId);
       emit(OfferListLoaded(offers: offers));
     } catch (e) {
-      String message;
-      if (e is ApiException) {
-        message = e.userFriendlyMessage;
-      } else {
-        message = ErrorHandler.getUserFriendlyMessage(e);
-      }
-      emit(OfferListFailure(message: message));
+      emit(OfferListFailure(message: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -47,13 +41,7 @@ class OfferListBloc extends Bloc<OfferListEvent, OfferListState> {
       emit(OfferListLoaded(offers: offers, message: 'Offer accepted successfully!'));
     } catch (e) {
       debugPrint('OfferListBloc: Error accepting offer: $e');
-      String message;
-      if (e is ApiException) {
-        message = e.userFriendlyMessage;
-      } else {
-        message = ErrorHandler.getUserFriendlyMessage(e);
-      }
-      emit(OfferListFailure(message: message));
+      emit(OfferListFailure(message: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }

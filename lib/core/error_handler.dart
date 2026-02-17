@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import '../services/api_service.dart';
 
 class ErrorHandler {
   /// Converts complex/verbose exceptions into user-friendly messages.
@@ -12,10 +14,25 @@ class ErrorHandler {
        debugPrint('Stack trace: ${error.stackTrace}');
     }
 
+    if (error is ApiException) {
+      return error.userFriendlyMessage;
+    }
+
     if (error is DioException) {
       return _handleDioError(error);
     }
     
+    if (error is PlatformException) {
+      final message = error.message?.toLowerCase() ?? '';
+      if (message.contains('network') || message.contains('connection lost')) {
+        return 'Connection lost. Please check your internet.';
+      }
+      if (message.contains('cancel')) {
+        return 'Sign-in cancelled.';
+      }
+      return 'An external service error occurred. Please try again.';
+    }
+
     if (error is SocketException) {
       return 'No internet connection. Please check your network settings.';
     }

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../../core/error_handler.dart';
 import 'invoice_event.dart';
 import 'invoice_state.dart';
 
@@ -22,7 +23,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       await Future.delayed(const Duration(seconds: 1));
       emit(InvoiceCreated(event.invoice));
     } catch (e) {
-      emit(InvoiceFailure(e.toString()));
+      emit(InvoiceFailure(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -103,7 +104,7 @@ class InvoiceBloc extends Bloc<InvoiceEvent, InvoiceState> {
       final Uint8List pdfData = await pdf.save();
       emit(InvoicePdfGenerated(pdfData, 'invoice_${invoice.id}.pdf'));
     } catch (e) {
-      emit(InvoiceFailure(e.toString()));
+      emit(InvoiceFailure(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }

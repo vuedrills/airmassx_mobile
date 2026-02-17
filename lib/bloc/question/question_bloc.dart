@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
+import '../../core/error_handler.dart';
 import 'question_event.dart';
 import 'question_state.dart';
 
@@ -22,7 +23,7 @@ class QuestionBloc extends Bloc<QuestionEvent, QuestionState> {
       final questions = await _apiService.getQuestions(event.taskId);
       emit(QuestionsLoaded(questions));
     } catch (e) {
-      emit(QuestionError(e.toString()));
+      emit(QuestionError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -43,7 +44,7 @@ class QuestionBloc extends Bloc<QuestionEvent, QuestionState> {
       if (currentState is QuestionsLoaded) {
         emit(currentState);
       }
-      emit(QuestionError(e.toString()));
+      emit(QuestionError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -63,7 +64,7 @@ class QuestionBloc extends Bloc<QuestionEvent, QuestionState> {
       if (currentState is QuestionsLoaded) {
         emit(currentState);
       }
-      emit(QuestionError(e.toString()));
+      emit(QuestionError(ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 }

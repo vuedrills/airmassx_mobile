@@ -19,6 +19,7 @@ import '../../core/service_locator.dart';
 import '../../services/api_service.dart';
 import '../../widgets/user_avatar.dart';
 import '../tasks/offer_card.dart';
+import '../../core/ui_utils.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String taskId;
@@ -202,7 +203,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               ),
             ),
             Text(
-               '\$${task.budget.toStringAsFixed(0)}',
+               '\$${UIUtils.formatBudget(task.budget)}',
                style: GoogleFonts.oswald(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primary),
             ),
           ],

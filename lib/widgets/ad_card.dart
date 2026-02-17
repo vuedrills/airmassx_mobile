@@ -6,6 +6,9 @@ import '../config/theme.dart';
 import '../services/api_service.dart';
 import '../core/service_locator.dart';
 
+import '../screens/equipment/post_equipment_request_screen.dart';
+import '../screens/tasks/create_task_screen.dart';
+
 class AdCard extends StatefulWidget {
   final Ad ad;
 
@@ -27,9 +30,29 @@ class _AdCardState extends State<AdCard> {
     // Track click
     getIt<ApiService>().trackAdClick(widget.ad.id);
     
-    final Uri url = Uri.parse(widget.ad.actionUrl);
-    if (!await launchUrl(url)) {
-      debugPrint('Could not launch ${widget.ad.actionUrl}');
+    if (!mounted) return;
+
+    final actionUrl = widget.ad.actionUrl;
+
+    // Handle internal app navigation
+    if (actionUrl == 'app://create-task') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CreateTaskScreen()),
+      );
+    } else if (actionUrl == 'app://create-equipment-request') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PostEquipmentRequestScreen()),
+      );
+    } else {
+      // Launch external URL
+      final Uri url = Uri.parse(actionUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        debugPrint('Could not launch $actionUrl');
+      }
     }
   }
 

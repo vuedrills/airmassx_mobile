@@ -4,6 +4,7 @@ import '../../services/api_service.dart';
 import '../../services/realtime_service.dart';
 import '../../models/message.dart';
 import '../../models/conversation.dart';
+import '../../core/error_handler.dart';
 import 'message_event.dart';
 import 'message_state.dart';
 
@@ -40,7 +41,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       final conversations = await _apiService.getConversations();
       emit(ConversationsLoaded(conversations: conversations));
     } catch (e) {
-      emit(MessageError(message: e.toString()));
+      emit(MessageError(message: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -107,7 +108,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         conversationId: event.conversationId,
       ));
     } catch (e) {
-      emit(MessageError(message: e.toString()));
+      emit(MessageError(message: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -138,7 +139,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         conversationId: event.conversationId,
       ));
     } catch (e) {
-      emit(MessageError(message: e.toString()));
+      emit(MessageError(message: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 
@@ -149,7 +150,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     try {
       await _apiService.markMessageAsRead(event.messageId);
     } catch (e) {
-      emit(MessageError(message: e.toString()));
+      emit(MessageError(message: ErrorHandler.getUserFriendlyMessage(e)));
     }
   }
 

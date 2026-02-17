@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../models/portfolio_item.dart';
 
 abstract class ProRegistrationEvent extends Equatable {
   const ProRegistrationEvent();
@@ -53,12 +54,12 @@ class ProRegistrationProfessionsUpdated extends ProRegistrationEvent {
 }
 
 class ProRegistrationPortfolioUpdated extends ProRegistrationEvent {
-  final List<String> portfolioUrls;
+  final List<PortfolioItem> portfolioItems;
 
-  const ProRegistrationPortfolioUpdated(this.portfolioUrls);
+  const ProRegistrationPortfolioUpdated(this.portfolioItems);
 
   @override
-  List<Object?> get props => [portfolioUrls];
+  List<Object?> get props => [portfolioItems];
 }
 
 class ProRegistrationQualificationAdded extends ProRegistrationEvent {

@@ -1083,20 +1083,34 @@ class ApiService {
       }).toList();
     }
 
-    // Map portfolio items from tasker_profile.portfolio_urls
+    // Map portfolio items from tasker_profile.portfolio_items (new) or portfolio_urls (deprecated)
     List<PortfolioItem> portfolio = [];
-    if (data['tasker_profile'] != null && data['tasker_profile']['portfolio_urls'] != null) {
-      portfolio = (data['tasker_profile']['portfolio_urls'] as List).map((url) {
-        String finalUrl = url.toString();
-        if (!finalUrl.startsWith('http')) {
-          finalUrl = '$assetBaseUrl$finalUrl';
-        }
-        return PortfolioItem(
-          id: url.toString(),
-          imageUrl: finalUrl,
-          title: 'Project Item', // Fallback title since backend doesn't provide one
-        );
-      }).toList();
+    if (data['tasker_profile'] != null) {
+      if (data['tasker_profile']['portfolio_items'] != null && (data['tasker_profile']['portfolio_items'] as List).isNotEmpty) {
+        portfolio = (data['tasker_profile']['portfolio_items'] as List).map((item) {
+          String url = item['url']?.toString() ?? '';
+          if (url.isNotEmpty && !url.startsWith('http') && !url.startsWith('mailto:') && !url.startsWith('tel:')) {
+            url = '$assetBaseUrl$url';
+          }
+          return PortfolioItem(
+            title: item['title'] ?? 'Project Item',
+            url: url,
+            type: item['type'] ?? (item['url']?.toString().contains('http') == true ? 'link' : 'image'),
+          );
+        }).toList();
+      } else if (data['tasker_profile']['portfolio_urls'] != null) {
+        portfolio = (data['tasker_profile']['portfolio_urls'] as List).map((url) {
+          String finalUrl = url.toString();
+          if (!finalUrl.startsWith('http')) {
+            finalUrl = '$assetBaseUrl$finalUrl';
+          }
+          return PortfolioItem(
+            title: 'Project Item',
+            url: finalUrl,
+            type: finalUrl.contains('http') && !finalUrl.contains(assetBaseUrl) ? 'link' : 'image',
+          );
+        }).toList();
+      }
     }
 
     return User(
@@ -1716,11 +1730,51 @@ class ApiService {
 
   // Support
   Future<void> sendSupportMessage({required String subject, required String message}) async {
+    // Use a separate Dio instance to avoid triggering global 401 logout
+    final supportDio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+      },
+      validateStatus: (status) => status != null && status < 500, // Do not throw on 401 immediately
+    ));
+
     try {
-      await _dio.post('/support/tickets', data: {
+      final response = await supportDio.post('/support/tickets', data: {
         'subject': subject, 
         'message': message,
       });
+
+      if (response.statusCode == 401) {
+        // Token was rejected, try sending anonymously but include ID info in body
+        debugPrint('ApiService: Token rejected (401), retrying anonymously with identity info...');
+        supportDio.options.headers.remove('Authorization');
+        
+        String identifier = "";
+        if (_currentUser != null) {
+          identifier = "\n\n--- User Info (Session Expired) ---\nName: ${_currentUser?.name}\nEmail: ${_currentUser?.email}\nID: ${_currentUser?.id}";
+        }
+
+        final retryResponse = await supportDio.post('/support/tickets', data: {
+          'subject': subject, 
+          'message': message + identifier,
+        });
+        
+        if (retryResponse.statusCode! >= 400) {
+            throw DioException(
+                requestOptions: retryResponse.requestOptions,
+                response: retryResponse,
+                type: DioExceptionType.badResponse,
+            );
+        }
+      } else if (response.statusCode! >= 400) {
+         throw DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+         );
+      }
     } catch (e) {
       debugPrint('ApiService: Error sending support message: $e');
       rethrow;
