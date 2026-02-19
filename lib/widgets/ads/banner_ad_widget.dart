@@ -74,8 +74,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> with AutomaticKeepAlive
       return const SizedBox.shrink();
     }
 
-    return Container(
-      alignment: Alignment.center,
+    return SizedBox(
       width: _bannerAd!.size.width.toDouble(),
       height: _bannerAd!.size.height.toDouble(),
       child: AdWidget(ad: _bannerAd!),

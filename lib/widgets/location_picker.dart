@@ -70,8 +70,8 @@ class _LocationPickerState extends State<LocationPicker> {
   String _selectedAddress = '';
   List<Marker> _markers = [];
 
-  // Default center (Harare, Zimbabwe)
-  static const _defaultCenter = LatLng(-17.8252, 31.0335);
+  // Default center (Zimbabwe, zoomed out)
+  static const _defaultCenter = LatLng(-19.0154, 29.1549);
 
   @override
   void initState() {
@@ -79,7 +79,10 @@ class _LocationPickerState extends State<LocationPicker> {
     if (widget.initialLat != null && widget.initialLng != null) {
       _selectedLocation = LatLng(widget.initialLat!, widget.initialLng!);
       _updateMarker(_selectedLocation!);
+    } else {
+      _tryGetGpsLocation();
     }
+
     if (widget.initialAddress != null) {
       _selectedAddress = widget.initialAddress!;
       _searchController.text = widget.initialAddress!;
@@ -90,6 +93,27 @@ class _LocationPickerState extends State<LocationPicker> {
         setState(() => _showSearchResults = false);
       }
     });
+  }
+
+  Future<void> _tryGetGpsLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+      final position = await _geocodingService.getCurrentLocation();
+      if (position != null && mounted) {
+        final latLng = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _selectedLocation = latLng;
+          _updateMarker(latLng);
+        });
+        try {
+          _mapController.move(latLng, 15.0);
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   @override
@@ -125,7 +149,27 @@ class _LocationPickerState extends State<LocationPicker> {
     });
   }
 
-  void _selectPlace(PlaceResult place) {
+  void _selectPlace(PlaceResult place) async {
+    // If we have a placeId but no coordinates (Google Autocomplete), fetch details
+    if (place.placeId != null && (place.lat == 0 && place.lng == 0)) {
+      setState(() => _isLoadingLocation = true);
+      final details = await _geocodingService.getGooglePlaceDetails(place.placeId!);
+      
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+        if (details != null) {
+          place = details;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to load place details')),
+          );
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+
     setState(() {
       _selectedLocation = LatLng(place.lat, place.lng);
       _selectedAddress = place.label;
@@ -134,7 +178,11 @@ class _LocationPickerState extends State<LocationPicker> {
       _updateMarker(_selectedLocation!);
     });
 
-    _mapController.move(_selectedLocation!, 15.0);
+    try {
+      _mapController.move(_selectedLocation!, 15.0);
+    } catch (e) {
+      debugPrint('OSM Controller not attached: $e');
+    }
     _searchFocusNode.unfocus();
 
     widget.onLocationSelected(LocationResult(
@@ -227,7 +275,11 @@ class _LocationPickerState extends State<LocationPicker> {
       _updateMarker(latLng);
     });
 
-    _mapController.move(latLng, 16.0);
+    try {
+      _mapController.move(latLng, 16.0);
+    } catch (e) {
+      debugPrint('OSM Controller not attached: $e');
+    }
 
     // Reverse geocode to get address
     final result = await _geocodingService.reverseGeocode(latLng.latitude, latLng.longitude);
@@ -420,7 +472,7 @@ class _LocationPickerState extends State<LocationPicker> {
               children: [
                 DynamicMap(
                   initialCenter: _selectedLocation ?? _defaultCenter,
-                  initialZoom: _selectedLocation != null ? 15.0 : 11.0,
+                  initialZoom: _selectedLocation != null ? 15.0 : 6.0,
                   osmController: _mapController,
                   markers: _selectedLocation != null 
                     ? [DynamicMarker(id: 'pin', point: _selectedLocation!)] 

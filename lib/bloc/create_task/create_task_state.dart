@@ -36,6 +36,7 @@ class CreateTaskState extends Equatable {
   final String? requiredCapacityId; // Equipment capacity selection
   final double? capacityValue;      // Manual capacity value
   final String? capacityUnit;       // Manual capacity unit
+  final String? otherEquipmentDescription; // Custom name for 'Other Equipment'
   final List<String> categories;
   final List<String> photos;
   final List<String> attachments; // Document attachments (BOQs, plans, PDFs)
@@ -92,6 +93,7 @@ class CreateTaskState extends Equatable {
     this.requiredCapacityId,
     this.capacityValue,
     this.capacityUnit,
+    this.otherEquipmentDescription,
     this.provisionType,
     this.requiresSiteVisit = false,
     this.boqPath,
@@ -144,6 +146,7 @@ class CreateTaskState extends Equatable {
     String? requiredCapacityId,
     double? capacityValue,
     String? capacityUnit,
+    String? otherEquipmentDescription,
     String? provisionType,
     List<String>? attachments,
     bool? requiresSiteVisit,
@@ -193,6 +196,7 @@ class CreateTaskState extends Equatable {
       requiredCapacityId: requiredCapacityId ?? this.requiredCapacityId,
       capacityValue: capacityValue ?? this.capacityValue,
       capacityUnit: capacityUnit ?? this.capacityUnit,
+      otherEquipmentDescription: otherEquipmentDescription ?? this.otherEquipmentDescription,
       provisionType: provisionType ?? this.provisionType,
       attachments: attachments ?? this.attachments,
       requiresSiteVisit: requiresSiteVisit ?? this.requiresSiteVisit,
@@ -245,6 +249,7 @@ class CreateTaskState extends Equatable {
         requiredCapacityId,
         capacityValue,
         capacityUnit,
+        otherEquipmentDescription,
         provisionType,
         attachments,
         requiresSiteVisit,

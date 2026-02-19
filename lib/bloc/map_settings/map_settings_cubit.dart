@@ -26,7 +26,7 @@ class MapSettingsState {
 class MapSettingsCubit extends Cubit<MapSettingsState> {
   final ApiService _apiService;
 
-  MapSettingsCubit(this._apiService) : super(MapSettingsState(provider: MapProvider.osm)) {
+  MapSettingsCubit(this._apiService) : super(MapSettingsState(provider: MapProvider.google)) {
     loadSettings();
   }
 
@@ -34,7 +34,8 @@ class MapSettingsCubit extends Cubit<MapSettingsState> {
     emit(state.copyWith(isLoading: true));
     try {
       final providerStr = await _apiService.getMapProvider();
-      final provider = providerStr == 'google' ? MapProvider.google : MapProvider.osm;
+      // Default to Google if API fails or returns unknown
+      final provider = providerStr == 'osm' ? MapProvider.osm : MapProvider.google;
       emit(state.copyWith(provider: provider, isLoading: false));
     } catch (e) {
       emit(state.copyWith(isLoading: false));

@@ -232,7 +232,7 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
 
   Widget _buildAddButton(BuildContext context) {
     return InkWell(
-      onTap: _isUploading ? null : () => _showAddOptions(context),
+      onTap: _isUploading ? null : () => _pickAndUploadImages(context.read<ProRegistrationBloc>()),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
@@ -248,13 +248,13 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.add_link, 
+              Icons.add_photo_alternate_outlined, 
               color: _isUploading ? AppTheme.neutral300 : AppTheme.primary, 
               size: 28,
             ),
             const SizedBox(height: 4),
             Text(
-              'Add',
+              'Add Photo',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -267,170 +267,14 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
     );
   }
 
-  void _showAddOptions(BuildContext context) {
-    final bloc = context.read<ProRegistrationBloc>();
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (modalContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.image, color: AppTheme.primary),
-              title: const Text('Upload Photo'),
-              onTap: () {
-                Navigator.pop(modalContext);
-                _pickAndUploadImages(bloc);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.link, color: AppTheme.primary),
-              title: const Text('Add Link (GitHub, Portfolio, etc.)'),
-              onTap: () {
-                Navigator.pop(modalContext);
-                _showAddLinkDialog(context, bloc);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // _showAddOptions is removed as we only support image uploads now
 
-  void _showAddLinkDialog(BuildContext context, ProRegistrationBloc bloc) {
-    final urlController = TextEditingController();
-    final titleController = TextEditingController();
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (modalContext) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(modalContext).viewInsets.bottom,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Add Portfolio Link',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.navy,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Add a link to your GitHub, Behance, or personal website.',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Project Title',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: titleController,
-                    decoration: InputDecoration(
-                      hintText: 'e.g. My Portfolio website',
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Project URL',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: urlController,
-                    decoration: InputDecoration(
-                      hintText: 'https://github.com/username',
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
-                      ),
-                    ),
-                    keyboardType: TextInputType.url,
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: _buildGradientButton(
-                      text: 'Add Link',
-                      onPressed: () {
-                        final url = urlController.text.trim();
-                        final title = titleController.text.trim();
-                        if (url.isNotEmpty && title.isNotEmpty) {
-                          final currentItems = List<PortfolioItem>.from(bloc.state.portfolioItems);
-                          if (currentItems.length < 10) {
-                            final newItem = PortfolioItem(
-                              title: title,
-                              url: url,
-                              type: 'link',
-                            );
-                            bloc.add(ProRegistrationPortfolioUpdated([...currentItems, newItem]));
-                          }
-                          Navigator.pop(modalContext);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildPortfolioItem(BuildContext context, PortfolioItem item, int index) {
     if (item.type == 'link') {
-      return _buildLinkCard(context, item, index);
+      // Gracefully handle existing links by showing a placeholder or skipping
+      // For now, we'll skip rendering them in the grid if they somehow exist
+      return const SizedBox.shrink(); 
     }
 
     // Image rendering
@@ -463,65 +307,6 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
     );
   }
 
-  Widget _buildLinkCard(BuildContext context, PortfolioItem item, int index) {
-    IconData icon = Icons.link;
-    Color color = Colors.grey;
-    final url = item.url;
-
-    if (url.contains('github.com')) {
-      icon = Icons.code;
-      color = Colors.black;
-    } else if (url.contains('behance.net')) {
-      icon = Icons.brush;
-      color = Colors.blue;
-    } else if (url.contains('dribbble.com')) {
-      icon = Icons.sports_basketball;
-      color = Colors.pink;
-    } else if (url.contains('linkedin.com')) {
-      icon = Icons.work;
-      color = Colors.blue[800]!;
-    }
-
-    return Stack(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppTheme.neutral100,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.neutral200),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 28, color: color),
-              const SizedBox(height: 4),
-              Text(
-                item.title,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.navy),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                url.replaceFirst(RegExp(r'https?://(www\.)?'), ''),
-                style: const TextStyle(fontSize: 9, color: AppTheme.neutral600),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: _buildRemoveButton(context, index),
-        ),
-      ],
-    );
-  }
 
   Widget _buildRemoveButton(BuildContext context, int index) {
     return GestureDetector(
@@ -594,7 +379,10 @@ class _StepPortfolioState extends State<StepPortfolio> with TickerProviderStateM
 
   Future<void> _pickAndUploadImages(ProRegistrationBloc bloc) async {
     final picker = ImagePicker();
-    final images = await picker.pickMultiImage(imageQuality: 80);
+    final images = await picker.pickMultiImage(
+      imageQuality: 70,
+      maxWidth: 1920,
+    );
     if (images.isEmpty) return;
 
     final currentItems = List<PortfolioItem>.from(bloc.state.portfolioItems);

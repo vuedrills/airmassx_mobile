@@ -6,7 +6,7 @@ import '../../../bloc/pro_registration/pro_registration_bloc.dart';
 import '../../../bloc/pro_registration/pro_registration_event.dart';
 import '../../../bloc/pro_registration/pro_registration_state.dart';
 import '../../../config/theme.dart';
-import '../../../widgets/enhanced_location_picker.dart';
+import '../../../widgets/pro_registration_location_picker.dart';
 
 class StepLocation extends StatefulWidget {
   final VoidCallback onNext;
@@ -109,12 +109,10 @@ class _StepLocationState extends State<StepLocation> with TickerProviderStateMix
                       opacity: _fadeAnimations[1],
                       child: SlideTransition(
                         position: _slideAnimations[1],
-                        child: EnhancedLocationPicker(
-                          initialCity: state.primaryCity.isNotEmpty ? state.primaryCity : null,
+                        child: ProRegistrationLocationPicker(
                           initialAddress: state.primaryAddress.isNotEmpty ? state.primaryAddress : null,
                           initialLat: state.primaryLatitude,
                           initialLng: state.primaryLongitude,
-                          hintText: 'e.g., 123 Main Street, near OK Supermarket',
                           onLocationSelected: (result) {
                             context.read<ProRegistrationBloc>().add(
                               ProRegistrationLocationUpdated(

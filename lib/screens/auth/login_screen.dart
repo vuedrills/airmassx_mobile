@@ -161,30 +161,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'WELCOME BACK',
-                              style: TextStyle(
-                                color: AppTheme.primary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
                           Text(
-                            'Log in to your\naccount',
-                            style: GoogleFonts.oswald(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
+                            'Log in to your account',
+                            style: GoogleFonts.nunitoSans(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
                               color: AppTheme.navy,
-                              height: 1.1,
+                              height: 1.2,
                             ),
                           ),
                           const SizedBox(height: 8),

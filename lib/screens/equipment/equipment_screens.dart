@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/category/category_bloc.dart';
+import '../../bloc/category/category_state.dart';
 import '../../models/equipment.dart';
 import '../../config/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -78,83 +81,91 @@ class _EquipmentBrowseScreenState extends State<EquipmentBrowseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredEquipment = selectedCategory == 'All'
-        ? _equipmentList
-        : _equipmentList.where((e) => e.category == selectedCategory).toList();
+    return BlocBuilder<CategoryBloc, CategoryState>(
+      builder: (context, catState) {
+        final List<String> serverCategories = catState is CategoryLoaded 
+            ? ['All', ...catState.getEquipmentCategories().map((c) => c.name)]
+            : ['All'];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Equipment Rental'),
-        backgroundColor: AppTheme.navy,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PostEquipmentScreen(),
+        final filteredEquipment = selectedCategory == 'All'
+            ? _equipmentList
+            : _equipmentList.where((e) => e.category == selectedCategory).toList();
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Equipment Rental'),
+            backgroundColor: AppTheme.navy,
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PostEquipmentScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              // Category filter
+              SizedBox(
+                height: 50,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: serverCategories.length,
+                  itemBuilder: (context, index) {
+                    final category = serverCategories[index];
+                    final isSelected = category == selectedCategory;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      child: ChoiceChip(
+                        label: Text(category),
+                      selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            selectedCategory = category;
+                          });
+                        },
+                        selectedColor: AppTheme.primary,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+              
+              // Equipment grid
+              Expanded(
+                child: filteredEquipment.isEmpty
+                    ? const Center(
+                        child: Text('No equipment found in this category'),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: filteredEquipment.length,
+                        itemBuilder: (context, index) {
+                          return _EquipmentCard(equipment: filteredEquipment[index]);
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Category filter
-          SizedBox(
-            height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final isSelected = category == selectedCategory;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: ChoiceChip(
-                    label: Text(category),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        selectedCategory = category;
-                      });
-                    },
-                    selectedColor: AppTheme.lightTheme.primaryColor,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          
-          // Equipment grid
-          Expanded(
-            child: filteredEquipment.isEmpty
-                ? const Center(
-                    child: Text('No equipment found in this category'),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: filteredEquipment.length,
-                    itemBuilder: (context, index) {
-                      return _EquipmentCard(equipment: filteredEquipment[index]);
-                    },
-                  ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -578,8 +589,6 @@ class _PostEquipmentScreenState extends State<PostEquipmentScreen> {
   List<String> _photos = [];
   bool _isUploading = false;
 
-  final categories = ['Power Tools', 'Hand Tools', 'Vehicles', 'Garden', 'Construction', 'Other'];
-
   @override
   void dispose() {
     _titleController.dispose();
@@ -623,20 +632,33 @@ class _PostEquipmentScreenState extends State<PostEquipmentScreen> {
               const SizedBox(height: 16),
 
               // Category
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
-                items: categories.map((c) => DropdownMenuItem(
-                  value: c,
-                  child: Text(c),
-                )).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value!;
-                  });
+              BlocBuilder<CategoryBloc, CategoryState>(
+                builder: (context, catState) {
+                  final serverCategories = catState is CategoryLoaded 
+                      ? catState.getEquipmentCategories().map((c) => c.name).toList()
+                      : <String>[];
+                  
+                  // Ensure current selection is valid or default it
+                  if (serverCategories.isNotEmpty && !serverCategories.contains(_selectedCategory)) {
+                    _selectedCategory = serverCategories.first;
+                  }
+
+                  return DropdownButtonFormField<String>(
+                    value: _selectedCategory.isEmpty && serverCategories.isNotEmpty ? serverCategories.first : _selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: serverCategories.map((c) => DropdownMenuItem<String>(
+                      value: c,
+                      child: Text(c),
+                    )).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value!;
+                      });
+                    },
+                  );
                 },
               ),
               const SizedBox(height: 16),
@@ -833,7 +855,11 @@ class _PostEquipmentScreenState extends State<PostEquipmentScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final image = await picker.pickImage(
+      source: ImageSource.gallery, 
+      imageQuality: 70,
+      maxWidth: 1920,
+    );
     
     if (image != null) {
       setState(() => _isUploading = true);

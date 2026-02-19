@@ -29,41 +29,61 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
     if (state is! BrowseLoaded) return;
     final currentState = state as BrowseLoaded;
 
-    if (currentState.hasReachedMax) return;
+    if (currentState.hasReachedMax || currentState.isFetchingMore) return;
+
+    // Set loading state to prevent duplicate requests
+    emit(currentState.copyWith(isFetchingMore: true));
 
     try {
-      final currentTasks = currentState.tasks;
       final limit = 20;
-      final offset = currentTasks.length;
+      // Use totalFetched (raw server cursor) instead of filtered tasks.length
+      final offset = currentState.totalFetched;
 
-      // Handle filters if any
-      FilterCriteria? criteria; 
-      // Note: We might need to store criteria in state if we want to support load more with filters properly.
-      // Currently LoadBrowseTasksWithFilter hardcodes criteria to 'open'.
-      // Let's assume for now we just use the basic taskType/tier filters stored in state.
-      
       final newTasks = await _apiService.getTasks(
         taskType: currentState.taskType,
         tier: currentState.tier,
         limit: limit,
         offset: offset,
-        // criteria: ... we need to persist criteria in state to support this fully
       );
 
-      if (newTasks.isEmpty) {
-        emit(currentState.copyWith(hasReachedMax: true));
+      // Track rawCount before filtering
+      final rawCount = newTasks.length;
+
+      // Filter new tasks
+      final visibleNewTasks = _filterVisibleTasks(newTasks);
+
+      // Deduplicate: remove any tasks that already exist in the current list
+      final existingIds = currentState.tasks.map((t) => t.id).toSet();
+      final uniqueNewTasks = visibleNewTasks.where((t) => !existingIds.contains(t.id)).toList();
+
+      final newTotalFetched = offset + rawCount;
+
+      if (uniqueNewTasks.isEmpty && rawCount > 0) {
+        // All new tasks were duplicates or filtered out, but server had data
+        emit(currentState.copyWith(
+          hasReachedMax: rawCount < limit,
+          isFetchingMore: false,
+          totalFetched: newTotalFetched,
+        ));
+      } else if (rawCount == 0) {
+        emit(currentState.copyWith(
+          hasReachedMax: true,
+          isFetchingMore: false,
+          totalFetched: newTotalFetched,
+        ));
       } else {
         emit(currentState.copyWith(
-          tasks: List.of(currentState.tasks)..addAll(newTasks),
-          hasReachedMax: newTasks.length < limit,
+          tasks: List.of(currentState.tasks)..addAll(uniqueNewTasks),
+          hasReachedMax: rawCount < limit,
           page: currentState.page + 1,
+          isFetchingMore: false,
+          totalFetched: newTotalFetched,
         ));
       }
     } catch (e) {
-      // For pagination error, maybe show a snackbar or just ignore?
-      // Emitting BrowseError would replace the whole UI with error screen which is bad.
-      // We'll just ignore or log for now.
       print('Pagination error: $e');
+      // Reset loading state on error so user can try again
+      emit(currentState.copyWith(isFetchingMore: false));
     }
   }
 
@@ -93,7 +113,8 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         _apiService.getAdsFrequency(),
       ]);
 
-      final tasks = results[0] as List<Task>;
+      final rawTasks = results[0] as List<Task>;
+      final tasks = _filterVisibleTasks(rawTasks);
       final ads = results[1] as List<Ad>;
       final categories = results[2] as List<Category>;
       final adsFrequency = results[3] as int;
@@ -107,6 +128,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         taskType: currentTaskType,
         tier: currentTier,
         adsFrequency: adsFrequency,
+        totalFetched: rawTasks.length,
       ));
     } catch (e) {
       emit(BrowseError(ErrorHandler.getUserFriendlyMessage(e)));
@@ -123,9 +145,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
     emit(BrowseLoading());
     try {
       // Map legacy event to FilterCriteria
-      final criteria = FilterCriteria(
-        taskStatus: const ['open'],
-      );
+      final criteria = const FilterCriteria();
       
       // Fetch tasks, categories, and ads in parallel
       final results = await Future.wait([
@@ -144,7 +164,8 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         return; // Ignore stale result
       }
       
-      final tasks = results[0] as List<Task>;
+      final rawTasks = results[0] as List<Task>;
+      final tasks = _filterVisibleTasks(rawTasks);
       final categories = results[1] as List<Category>;
       final ads = results[2] as List<Ad>;
       final adsFrequency = results[3] as int;
@@ -156,6 +177,7 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         taskType: event.taskType,
         tier: event.tier,
         adsFrequency: adsFrequency,
+        totalFetched: rawTasks.length,
       ));
     } catch (e) {
       if (requestId == _currentRequestId) {
@@ -211,8 +233,10 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
           return matchesSelf || matchesChild;
         }).toList();
         
+        final visibleFilteredTasks = _filterVisibleTasks(filteredTasks);
+        
         if (state is BrowseLoaded) {
-          emit((state as BrowseLoaded).copyWith(tasks: filteredTasks));
+          emit((state as BrowseLoaded).copyWith(tasks: visibleFilteredTasks));
         }
       }
     } catch (e) {
@@ -272,6 +296,24 @@ class BrowseBloc extends Bloc<BrowseEvent, BrowseState> {
         break;
     }
     
+    
     return sortedTasks;
+  }
+
+  List<Task> _filterVisibleTasks(List<Task> tasks) {
+    return tasks.where((t) {
+      // 1. Hide cancelled tasks
+      if (t.status == 'cancelled') return false;
+      
+      // 2. Hide completed tasks older than 14 days
+      if (t.status == 'completed') {
+        final date = t.updatedAt ?? t.createdAt;
+        final difference = DateTime.now().difference(date);
+        if (difference.inDays > 14) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
   }
 }

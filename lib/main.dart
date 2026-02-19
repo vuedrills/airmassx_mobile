@@ -37,9 +37,13 @@ import 'services/api_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/task.dart' as models;
 
+
+// Global flag for first launch detection
+bool _isFirstLaunch = false;
 
 void main() async {
   // Initialize App Config
@@ -112,7 +116,14 @@ void main() async {
       debugPrint('Loading categories...');
       getIt<CategoryBloc>().add(const LoadCategories());
       
-      debugPrint('App initialized, starting UI...');
+      // Check if this is the user's first launch
+      final prefs = await SharedPreferences.getInstance();
+      _isFirstLaunch = !(prefs.getBool('has_launched_before') ?? false);
+      if (_isFirstLaunch) {
+        await prefs.setBool('has_launched_before', true);
+      }
+
+      debugPrint('App initialized (firstLaunch=$_isFirstLaunch), starting UI...');
       runApp(
         DefaultAssetBundle(
           bundle: SentryAssetBundle(),
@@ -129,7 +140,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authBloc = getIt<AuthBloc>();
-    final appRouter = AppRouter(authBloc);
+    final appRouter = AppRouter(authBloc, isFirstLaunch: _isFirstLaunch);
     
     return MultiBlocProvider(
       providers: [

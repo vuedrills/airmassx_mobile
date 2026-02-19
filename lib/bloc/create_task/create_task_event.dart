@@ -116,6 +116,13 @@ class CreateTaskCategoryToggled extends CreateTaskEvent {
   List<Object?> get props => [category];
 }
 
+class CreateTaskOtherEquipmentDescriptionChanged extends CreateTaskEvent {
+  final String description;
+  const CreateTaskOtherEquipmentDescriptionChanged(this.description);
+  @override
+  List<Object?> get props => [description];
+}
+
 // ============ EQUIPMENT-SPECIFIC EVENTS ============
 
 /// Set the task type ('service' or 'equipment')

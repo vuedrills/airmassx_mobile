@@ -1066,7 +1066,11 @@ class _ProProfileManagementViewState extends State<_ProProfileManagementView> wi
 
   void _updateAvatar(BuildContext context) async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final image = await picker.pickImage(
+      source: ImageSource.gallery, 
+      imageQuality: 70,
+      maxWidth: 1920,
+    );
     if (image == null) return;
     try {
       final url = await getIt<ApiService>().uploadTaskerFile(File(image.path), 'profile_picture');
@@ -1080,7 +1084,11 @@ class _ProProfileManagementViewState extends State<_ProProfileManagementView> wi
 
   void _addPortfolioImage(BuildContext context) async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final image = await picker.pickImage(
+      source: ImageSource.gallery, 
+      imageQuality: 70,
+      maxWidth: 1920,
+    );
     if (image == null) return;
     try {
       final url = await getIt<ApiService>().uploadTaskerFile(File(image.path), 'portfolio');
@@ -1678,7 +1686,11 @@ class _QualificationFormModalState extends State<_QualificationFormModal> {
 
   Future<void> _pickDocument() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final image = await picker.pickImage(
+      source: ImageSource.gallery, 
+      imageQuality: 70,
+      maxWidth: 1920,
+    );
     if (image == null) return;
 
     setState(() => _isUploading = true);

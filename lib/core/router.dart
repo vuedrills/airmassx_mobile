@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../bloc/auth/auth_bloc.dart';
 import '../bloc/auth/auth_state.dart';
 import '../bloc/task/task_bloc.dart';
@@ -42,8 +43,9 @@ import '../main.dart';
 /// Implements declarative routing with auth state-based redirects
 class AppRouter {
   final AuthBloc authBloc;
+  final bool isFirstLaunch;
 
-  AppRouter(this.authBloc);
+  AppRouter(this.authBloc, {this.isFirstLaunch = false});
 
   late final GoRouter router = GoRouter(
     initialLocation: '/',
@@ -66,7 +68,7 @@ class AppRouter {
 
       // If user is not authenticated and trying to access protected screens
       if (!isAuthenticated && !isOnboarding) {
-        return '/login';
+        return isFirstLaunch ? '/signup' : '/login';
       }
 
       // No redirect needed

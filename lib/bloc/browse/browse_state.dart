@@ -33,7 +33,8 @@ class BrowseLoaded extends BrowseState {
   final bool hasReachedMax;
   final int page;
   final int adsFrequency;
-
+  final bool isFetchingMore;
+  final int totalFetched; // Tracks raw server offset (pre-filter count)
 
   const BrowseLoaded({
     required this.tasks,
@@ -47,6 +48,8 @@ class BrowseLoaded extends BrowseState {
     this.hasReachedMax = false,
     this.page = 0,
     this.adsFrequency = 3,
+    this.isFetchingMore = false,
+    this.totalFetched = 0,
   });
 
   BrowseLoaded copyWith({
@@ -61,6 +64,8 @@ class BrowseLoaded extends BrowseState {
     bool? hasReachedMax,
     int? page,
     int? adsFrequency,
+    bool? isFetchingMore,
+    int? totalFetched,
   }) {
     return BrowseLoaded(
       tasks: tasks ?? this.tasks,
@@ -74,11 +79,13 @@ class BrowseLoaded extends BrowseState {
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       page: page ?? this.page,
       adsFrequency: adsFrequency ?? this.adsFrequency,
+      isFetchingMore: isFetchingMore ?? this.isFetchingMore,
+      totalFetched: totalFetched ?? this.totalFetched,
     );
   }
 
   @override
-  List<Object?> get props => [tasks, categories, ads, selectedCategoryId, sortOption, isMapView, taskType, tier, hasReachedMax, page];
+  List<Object?> get props => [tasks, categories, ads, selectedCategoryId, sortOption, isMapView, taskType, tier, hasReachedMax, page, isFetchingMore, totalFetched];
 }
 
 /// Error state

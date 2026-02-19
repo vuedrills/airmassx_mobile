@@ -21,6 +21,7 @@ class ProRegistrationState extends Equatable {
 
   // Step 3: Professions
   final List<String> professionIds;
+  final List<String> customCategories;
 
   // Step 4: Portfolio
   final List<PortfolioItem> portfolioItems;
@@ -50,6 +51,7 @@ class ProRegistrationState extends Equatable {
     this.professionalType,
     this.idDocumentUrls = const [],
     this.professionIds = const [],
+    this.customCategories = const [],
     this.portfolioItems = const [],
     this.portfolioUrls = const [],
     this.qualifications = const [],
@@ -72,6 +74,7 @@ class ProRegistrationState extends Equatable {
     String? professionalType,
     List<String>? idDocumentUrls,
     List<String>? professionIds,
+    List<String>? customCategories,
     List<PortfolioItem>? portfolioItems,
     List<String>? portfolioUrls,
     List<Qualification>? qualifications,
@@ -93,6 +96,7 @@ class ProRegistrationState extends Equatable {
       professionalType: professionalType ?? this.professionalType,
       idDocumentUrls: idDocumentUrls ?? this.idDocumentUrls,
       professionIds: professionIds ?? this.professionIds,
+      customCategories: customCategories ?? this.customCategories,
       portfolioItems: portfolioItems ?? this.portfolioItems,
       portfolioUrls: portfolioUrls ?? this.portfolioUrls,
       qualifications: qualifications ?? this.qualifications,
@@ -140,6 +144,7 @@ class ProRegistrationState extends Equatable {
         professionalType,
         idDocumentUrls,
         professionIds,
+        customCategories,
         portfolioItems,
         portfolioUrls,
         qualifications,

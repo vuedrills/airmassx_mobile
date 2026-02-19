@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 
 import '../../models/user.dart';
 import '../../config/theme.dart';
@@ -644,6 +645,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Widget _buildPortfolioSection(BuildContext context) {
+    // Filter out items that are not images or don't have a valid URL
+    final portfolioImages = _user.portfolio
+        .where((item) => item.type != 'link' && item.url.isNotEmpty)
+        .toList();
+
+    if (portfolioImages.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -662,10 +670,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
-            itemCount: _user.portfolio.length,
+            itemCount: portfolioImages.length,
             itemBuilder: (context, index) {
-              final item = _user.portfolio[index];
-              final bool isLink = item.type == 'link';
+              final item = portfolioImages[index];
 
               return Container(
                 width: 240,
@@ -676,11 +683,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     Expanded(
                       child: GestureDetector(
                         onTap: () {
-                          if (isLink) {
-                            _launchURL(item.url);
-                          } else {
-                            _showFullScreenImage(context, item.url);
-                          }
+                          _showFullScreenImage(context, item.url);
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -695,21 +698,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: isLink 
-                              ? _buildLinkPlaceholder(item)
-                              : CachedNetworkImage(
-                                  imageUrl: item.url,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  placeholder: (context, url) => Container(
-                                    color: Colors.grey[100],
-                                    child: const Center(child: CircularProgressIndicator()),
-                                  ),
-                                  errorWidget: (context, url, error) => Container(
-                                    color: Colors.grey[100],
-                                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                                  ),
+                            child: CachedNetworkImage(
+                                imageUrl: item.url,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                placeholder: (context, url) => Container(
+                                  color: Colors.grey[100],
+                                  child: const Center(child: CircularProgressIndicator()),
                                 ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey[100],
+                                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                                ),
+                              ),
                           ),
                         ),
                       ),
@@ -730,19 +731,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (isLink) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              item.url.replaceFirst(RegExp(r'https?://(www\.)?'), ''),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.blue[700],
-                                decoration: TextDecoration.underline,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -757,92 +745,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  Widget _buildLinkPlaceholder(PortfolioItem item) {
-    IconData icon = Icons.link_rounded;
-    Color color = AppTheme.primary;
-    String host = '';
-    
-    try {
-      final uri = Uri.parse(item.url);
-      host = uri.host;
-      if (host.contains('github.com')) {
-        icon = Icons.code_rounded;
-        color = Colors.black;
-      } else if (host.contains('behance.net')) {
-        icon = Icons.brush_rounded;
-        color = Colors.blue;
-      } else if (host.contains('dribbble.com')) {
-        icon = Icons.sports_basketball_rounded;
-        color = Colors.pink;
-      } else if (host.contains('linkedin.com')) {
-        icon = Icons.work_rounded;
-        color = Colors.blue[800]!;
-      }
-    } catch (_) {}
 
-    return Container(
-      color: const Color(0xFFF8FAFC),
-      width: double.infinity,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 48, color: color),
-              ),
-              const SizedBox(height: 12),
-              if (host.isNotEmpty)
-                Text(
-                  host.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-            ],
-          ),
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-              child: Icon(Icons.open_in_new_rounded, size: 14, color: Colors.blue[700]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _launchURL(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $url')),
-        );
-      }
-    }
-  }
 
   Widget _buildReviewsSection(BuildContext context) {
     // Only show reviews with written comments in the preview list

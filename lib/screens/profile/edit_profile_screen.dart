@@ -46,7 +46,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         source: ImageSource.gallery,
         maxWidth: 800,
         maxHeight: 800,
-        imageQuality: 85,
+        imageQuality: 70,
       );
       
       if (image != null && mounted) {

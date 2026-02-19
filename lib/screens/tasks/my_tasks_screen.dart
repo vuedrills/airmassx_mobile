@@ -36,19 +36,32 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
   }
 
   List<Task> _filterTasks(List<Task> tasks) {
+    // 1. apply global visibility rules
+    final visibleTasks = tasks.where((t) {
+      // Rule: Completed tasks only visible for 14 days
+      if (t.status == 'completed') {
+        final date = t.updatedAt ?? t.createdAt;
+        final difference = DateTime.now().difference(date);
+        if (difference.inDays > 14) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+
     switch (_selectedFilter) {
       case 'Posted':
-        return tasks.where((t) => t.status == 'open' || t.status == 'posted').toList();
+        return visibleTasks.where((t) => t.status == 'open' || t.status == 'posted').toList();
       case 'Assigned':
-        return tasks.where((t) => t.status == 'assigned' || t.status == 'in_progress').toList();
+        return visibleTasks.where((t) => t.status == 'assigned' || t.status == 'in_progress').toList();
       case 'Booking Requests':
-        return tasks.where((t) => t.status == 'pending').toList();
+        return visibleTasks.where((t) => t.status == 'pending').toList();
       case 'Offered':
-        return tasks.where((t) => t.offersCount > 0).toList();
+        return visibleTasks.where((t) => t.offersCount > 0).toList();
       case 'Completed':
-        return tasks.where((t) => t.status == 'completed').toList();
+        return visibleTasks.where((t) => t.status == 'completed').toList();
       default:
-        return tasks;
+        return visibleTasks;
     }
   }
 
@@ -62,9 +75,9 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
       } else if (task.status == 'completed') {
         groupKey = 'COMPLETED TASKS';
       } else if (task.status == 'assigned' || task.status == 'in_progress') {
-        groupKey = 'ACTIVE TASKS';
+        groupKey = 'ACTIVE TASKS'; // Assigned & In Progress
       } else {
-        groupKey = 'POSTED TASKS';
+        groupKey = 'POSTED TASKS'; // Open
       }
       
       grouped.putIfAbsent(groupKey, () => []);
@@ -137,60 +150,76 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
           
           // Task list
           Expanded(
-            child: BlocBuilder<TaskBloc, TaskState>(
-              builder: (context, state) {
-                if (state.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            child: RefreshIndicator(
+              onRefresh: () async {
+                context.read<TaskBloc>().add(const TaskLoadMyTasks());
+                // Wait for the bloc to emit a non-loading state
+                await context.read<TaskBloc>().stream.firstWhere(
+                  (s) => !s.isLoading,
+                );
+              },
+              color: AppTheme.navy,
+              child: BlocBuilder<TaskBloc, TaskState>(
+                builder: (context, state) {
+                  if (state.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                if (state.error != null) {
-                  return Center(child: Text('Error: ${state.error}'));
-                }
-
-                final filteredTasks = _filterTasks(state.myTasks);
-                final groupedTasks = _groupTasksByStatus(filteredTasks);
-
-                if (filteredTasks.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  if (state.error != null) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: [
-                        Icon(
-                          Icons.assignment_outlined,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No tasks found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () => context.push('/create-task'),
-                          icon: const Icon(Icons.add_rounded, color: Colors.white),
-                          label: const Text('Post a Task'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                        Center(child: Text('Error: ${state.error}')),
+                      ],
+                    );
+                  }
+
+                  final filteredTasks = _filterTasks(state.myTasks);
+                  final groupedTasks = _groupTasksByStatus(filteredTasks);
+
+                  if (filteredTasks.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.assignment_outlined,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No tasks found',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: () => context.push('/create-task'),
+                                icon: const Icon(Icons.add_rounded, color: Colors.white),
+                                label: const Text('Post a Task'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    context.read<TaskBloc>().add(const TaskLoadMyTasks());
-                    await Future.delayed(const Duration(milliseconds: 500));
-                  },
-                  color: AppTheme.navy,
-                  child: ListView.builder(
+                  return ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     itemCount: groupedTasks.length,
                     itemBuilder: (context, index) {
@@ -218,9 +247,9 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                         ],
                       );
                     },
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],

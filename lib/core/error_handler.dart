@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../services/api_service.dart';
 
 class ErrorHandler {
@@ -12,6 +13,14 @@ class ErrorHandler {
     debugPrint('ErrorHandler caught: $error');
     if (error is Error) {
        debugPrint('Stack trace: ${error.stackTrace}');
+    }
+
+    // Report to Sentry in non-debug mode (or always if configured)
+    if (!kDebugMode) {
+      Sentry.captureException(
+        error, 
+        stackTrace: error is Error ? error.stackTrace : null,
+      );
     }
 
     if (error is ApiException) {
@@ -53,7 +62,7 @@ class ErrorHandler {
     }
 
     if (error.type == DioExceptionType.connectionError) {
-      return 'Unable to connect to server. Please check your internet.';
+      return 'Unable to connect. Please check your internet.';
     }
 
     if (error.type == DioExceptionType.badResponse) {
@@ -61,7 +70,7 @@ class ErrorHandler {
         
         if (statusCode != null) {
           if (statusCode >= 500) {
-            return 'Server error. We are working to fix it.';
+            return 'Something went wrong on our end. We are working to fix it.';
           }
           if (statusCode == 404) {
              return 'Resource not found.';
@@ -73,13 +82,36 @@ class ErrorHandler {
              return 'Session expired. Please log in again.';
           }
           
-          // Try to extract a message from the response body if it's a 400 or similar
           final data = error.response?.data;
-          if (data is Map<String, dynamic> && data.containsKey('message')) {
+          
+          // Case 1: Standard 'message' field
+          if (data is Map<String, dynamic> && data['message'] != null) {
              return data['message'].toString();
           }
-          if (data is Map<String, dynamic> && data.containsKey('error')) {
+          
+          // Case 2: Standard 'error' field 
+          if (data is Map<String, dynamic> && data['error'] != null) {
              return data['error'].toString();
+          }
+
+          // Case 3: Validation 'errors' map (Laravel/Rails style)
+          // e.g. {"errors": {"password": ["Too short"]}}
+          if (data is Map<String, dynamic> && data['errors'] is Map) {
+            final errors = data['errors'] as Map;
+            if (errors.isNotEmpty) {
+              // Return the first error message found
+              final firstKey = errors.keys.first;
+              final firstValue = errors[firstKey];
+              if (firstValue is List && firstValue.isNotEmpty) {
+                return firstValue.first.toString();
+              }
+              return firstValue.toString();
+            }
+          }
+          
+          // Case 4: Raw string response
+          if (data is String && data.isNotEmpty) {
+            return data;
           }
         }
     }

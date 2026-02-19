@@ -36,6 +36,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
     on<CreateTaskCapacityUnitChanged>(_onCapacityUnitChanged);
     on<CreateTaskProvisionTypeChanged>(_onProvisionTypeChanged);
     on<CreateTaskCostingBasisChanged>(_onCostingBasisChanged);
+    on<CreateTaskOtherEquipmentDescriptionChanged>(_onOtherEquipmentDescriptionChanged);
     on<CreateTaskAttachmentAdded>(_onAttachmentAdded);
     on<CreateTaskAttachmentRemoved>(_onAttachmentRemoved);
     on<CreateTaskReset>(_onReset);
@@ -123,10 +124,13 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
   ) {
     if (state.isEquipmentTask) {
       // Equipment tasks generally only have one machine type
+      final isOtherEquipment = event.category.toLowerCase().contains('other equipment');
+      
       emit(state.copyWith(
         categories: [event.category],
-        title: event.category,
+        title: isOtherEquipment ? 'Other Equipment' : event.category,
         requiredCapacityId: null,
+        otherEquipmentDescription: isOtherEquipment ? state.otherEquipmentDescription : null,
       ));
       return;
     }
@@ -165,6 +169,16 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
       hireDurationType: defaultDurationType,
       estimatedHours: null,
       estimatedDuration: null,
+    ));
+  }
+
+  void _onOtherEquipmentDescriptionChanged(
+    CreateTaskOtherEquipmentDescriptionChanged event,
+    Emitter<CreateTaskState> emit,
+  ) {
+    emit(state.copyWith(
+      otherEquipmentDescription: event.description,
+      title: event.description.isNotEmpty ? event.description : 'Other Equipment',
     ));
   }
 
@@ -379,6 +393,9 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
         if (state.capacityUnit != null) {
           taskData['capacity_unit'] = state.capacityUnit;
         }
+        if (state.otherEquipmentDescription != null) {
+          taskData['other_equipment_description'] = state.otherEquipmentDescription;
+        }
       }
 
       // Project-specific fields
@@ -389,6 +406,10 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
         if (state.timelineEnd != null) {
           final d = state.timelineEnd!;
           taskData['timeline_end'] = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        }
+        if (state.date != null) {
+          final d = state.date!;
+          taskData['timeline_start'] = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
         }
         if (state.requiresSiteVisit) {
           if (state.siteVisitDate != null) {
@@ -607,6 +628,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
       equipmentUnits: task.equipmentUnits,
       numberOfTrips: task.numberOfTrips,
       distancePerTrip: task.distancePerTrip,
+      otherEquipmentDescription: task.otherEquipmentDescription,
       // Project fields
       requiresSiteVisit: task.requiresSiteVisit ?? false,
       siteReadiness: task.siteReadiness,

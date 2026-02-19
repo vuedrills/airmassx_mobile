@@ -81,7 +81,11 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final image = await picker.pickImage(
+      source: ImageSource.gallery, 
+      imageQuality: 80,
+      maxWidth: 1920,
+    );
     
     if (image != null) {
       setState(() => _isUploading = true);

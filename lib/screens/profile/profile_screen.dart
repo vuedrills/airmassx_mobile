@@ -454,7 +454,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                          const Text('Version 1.0.0', style: TextStyle(color: AppTheme.textSecondary)),
                          const SizedBox(height: 16),
                          const Text(
-                           '© 2025 Airmass Solutions. All rights reserved.',
+                           '© 2025 Airmass Xpress. All rights reserved.',
                            textAlign: TextAlign.center,
                            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                          ),

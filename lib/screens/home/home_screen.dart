@@ -85,6 +85,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+      // Check if we're already fetching to avoid spamming the bloc
+      if (_browseBloc.state is BrowseLoaded && 
+          (_browseBloc.state as BrowseLoaded).isFetchingMore) {
+        return;
+      }
       _browseBloc.add(LoadMoreTasks());
     }
   }
@@ -333,6 +338,25 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                             final bool hasInternalAds = state.ads.isNotEmpty;
                             // Internal Ad position (from Admin)
                             final int internalAdPosition = state.adsFrequency;
+                            
+                            // Base count (tasks + ads)
+                            final int baseItemCount = taskCount 
+                              + (state.ads.isNotEmpty && taskCount >= internalAdPosition ? 1 : 0)
+                              + (taskCount ~/ 15);
+                              
+                            // If index matches baseItemCount, it's the loader
+                            if (state.isFetchingMore && index == baseItemCount) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 24.0),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 24, 
+                                    height: 24, 
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary)
+                                  ),
+                                ),
+                              );
+                            }
 
                             // Handle Internal Platform Ad
                             if (hasInternalAds && index == internalAdPosition && taskCount >= internalAdPosition) {
@@ -380,7 +404,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                             final int taskIndex = (blockIndex * 15) + indexInBlock;
 
                             if (taskIndex < taskCount) {
-                              return TaskCard(task: state.tasks[taskIndex])
+                              final task = state.tasks[taskIndex];
+                              // Filter out cancelled tasks
+                              if (task.status.toLowerCase() == 'cancelled') {
+                                return const SizedBox.shrink();
+                              }
+                              
+                              return TaskCard(task: task)
                                   .animate(delay: (100 * (index % 5)).ms)
                                   .fadeIn(duration: 400.ms)
                                   .slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuad);
@@ -394,7 +424,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           // Total = T + 1 + floor(T / 15)
                           childCount: state.tasks.length 
                               + (state.ads.isNotEmpty && state.tasks.length >= state.adsFrequency ? 1 : 0)
-                              + (state.tasks.length ~/ 15),
+                              + (state.tasks.length ~/ 15)
+                              + (state.isFetchingMore ? 1 : 0),
                         ),
                       ),
                     );

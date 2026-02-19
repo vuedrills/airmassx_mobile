@@ -21,7 +21,7 @@ class FilterCriteria extends Equatable {
     this.locationName,
     this.fromDate,
     this.toDate,
-    this.taskStatus = const ['open'],
+    this.taskStatus = const ['open', 'assigned', 'in_progress', 'completed'],
   });
 
   FilterCriteria copyWith({
@@ -55,7 +55,7 @@ class FilterCriteria extends Equatable {
         fromDate != null ||
         toDate != null ||
         taskStatus.length > 1 ||
-        (taskStatus.length == 1 && taskStatus.first != 'open');
+        (taskStatus.length == 4 && (!taskStatus.contains('open') || !taskStatus.contains('assigned') || !taskStatus.contains('in_progress') || !taskStatus.contains('completed')));
   }
 
   int get activeFilterCount {
@@ -63,7 +63,7 @@ class FilterCriteria extends Equatable {
     if (minPrice != null || maxPrice != null) count++;
     if (distanceKm != null) count++;
     if (fromDate != null || toDate != null) count++;
-    if (taskStatus.length > 1 || (taskStatus.length == 1 && taskStatus.first != 'open')) count++;
+    if (taskStatus.length != 4 || !taskStatus.contains('open') || !taskStatus.contains('assigned') || !taskStatus.contains('in_progress') || !taskStatus.contains('completed')) count++;
     return count;
   }
 
@@ -91,7 +91,7 @@ class FilterCriteria extends Equatable {
       locationName: json['locationName'] as String?,
       fromDate: json['fromDate'] != null ? DateTime.parse(json['fromDate'] as String) : null,
       toDate: json['toDate'] != null ? DateTime.parse(json['toDate'] as String) : null,
-      taskStatus: (json['taskStatus'] as List<dynamic>?)?.map((e) => e as String).toList() ?? const ['open'],
+      taskStatus: (json['taskStatus'] as List<dynamic>?)?.map((e) => e as String).toList() ?? const ['open', 'assigned', 'in_progress', 'completed'],
     );
   }
 

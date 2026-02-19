@@ -32,7 +32,7 @@ class NotificationService {
 
     // 3. Setup Local Notifications for Foreground
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
     
     const InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
@@ -57,7 +57,7 @@ class NotificationService {
               'High Importance Notifications',
               importance: Importance.max,
               priority: Priority.high,
-              icon: '@mipmap/ic_launcher',
+              icon: '@drawable/ic_notification',
             ),
           ),
         );

@@ -13,6 +13,7 @@ import '../../bloc/search/search_bloc.dart';
 import '../../bloc/browse/browse_bloc.dart';
 import '../../widgets/dynamic_map.dart';
 import '../../bloc/map_settings/map_settings_cubit.dart';
+import '../../widgets/category_selector.dart';
 
 /// Task Map View - Shows tasks on an OpenStreetMap
 class TaskMapScreen extends StatefulWidget {
@@ -39,6 +40,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
   List<Category> _categories = [];
   Map<String, LatLng> _geocodedLocations = {}; // Cache for geocoded locations
   bool _isLoading = true;
+  bool _isCategoriesLoading = true;
   Task? _selectedTask;
   String? _selectedCategory;
 
@@ -82,6 +84,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
   }
 
   Future<void> _loadCategories() async {
+    setState(() => _isCategoriesLoading = true);
     try {
       final apiService = getIt<ApiService>();
       final categories = await apiService.getCategories();
@@ -89,9 +92,13 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
       if (!mounted) return;
       setState(() {
         _categories = categories;
+        _isCategoriesLoading = false;
       });
     } catch (e) {
       print('Error loading categories: $e');
+      if (mounted) {
+        setState(() => _isCategoriesLoading = false);
+      }
     }
   }
 
@@ -145,10 +152,14 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
     final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
 
     controller.addListener(() {
-      _mapController.move(
-        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
-        zoomTween.evaluate(animation),
-      );
+      try {
+        _mapController.move(
+          LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+          zoomTween.evaluate(animation),
+        );
+      } catch (e) {
+        // Map controller might not be ready
+      }
     });
 
     animation.addStatusListener((status) {
@@ -324,17 +335,23 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
                 child: Column(
                   children: [
                     _buildMapActionBtn(Icons.add, () {
-                      final zoom = _mapController.camera.zoom + 1;
-                      _mapController.move(_mapController.camera.center, zoom);
+                      try {
+                        final zoom = _mapController.camera.zoom + 1;
+                        _mapController.move(_mapController.camera.center, zoom);
+                      } catch (_) {}
                     }),
                     Container(height: 1, width: 24, color: Colors.grey.shade200),
                     _buildMapActionBtn(Icons.remove, () {
-                      final zoom = _mapController.camera.zoom - 1;
-                      _mapController.move(_mapController.camera.center, zoom);
+                      try {
+                        final zoom = _mapController.camera.zoom - 1;
+                        _mapController.move(_mapController.camera.center, zoom);
+                      } catch (_) {}
                     }),
                     Container(height: 1, width: 24, color: Colors.grey.shade200),
                     _buildMapActionBtn(Icons.my_location, () {
-                      _mapController.move(_defaultCenter, 12);
+                      try {
+                        _mapController.move(_defaultCenter, 12);
+                      } catch (_) {}
                     }),
                   ],
                 ),
@@ -403,7 +420,7 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
               top: 16,
               right: 16,
               left: 150, // Avoid overlapping with "items on map" badge
-              child: _buildCategoryDropdown(),
+              child: _buildFilterButton(),
             ),
           ],
         ),
@@ -426,119 +443,79 @@ class _TaskMapScreenState extends State<TaskMapScreen> with TickerProviderStateM
     });
   }
 
-  Widget _buildCategoryDropdown() {
-    // Group categories
-    final tradesRaw = _categories.where((c) => c.tier == 'artisanal' || c.tier == 'automotive').toList();
-    final professionalsRaw = _categories.where((c) => c.tier == 'professional').toList();
-    final equipmentRaw = _categories.where((c) => c.tier == 'equipment').toList();
-
-    // Helper to move 'Other' to end
-    List<Category> _moveOtherToEnd(List<Category> list) {
-      final normal = list.where((c) => c.name.toLowerCase() != 'other').toList();
-      final other = list.where((c) => c.name.toLowerCase() == 'other').toList();
-      return [...normal, ...other];
-    }
-
-    final trades = _moveOtherToEnd(tradesRaw);
-    final professionals = _moveOtherToEnd(professionalsRaw);
-    final equipment = _moveOtherToEnd(equipmentRaw);
-
-    final Set<String> seenNames = {};
-
-    List<DropdownMenuItem<String>> buildItems(List<Category> categories) {
-      final List<DropdownMenuItem<String>> items = [];
-      for (final c in categories) {
-        if (!seenNames.contains(c.name)) {
-          seenNames.add(c.name);
-          items.add(DropdownMenuItem(
-            value: c.name,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Text(c.name),
-            ),
-          ));
-        }
-      }
-      return items;
-    }
-
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+  Widget _buildFilterButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _isCategoriesLoading ? null : _showCategorySelector,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+            border: Border.all(color: Colors.grey.shade200),
           ),
-        ],
-        border: Border.all(color: Colors.grey.shade200),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isCategoriesLoading)
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(
+                  _selectedCategory == null ? Icons.filter_list : Icons.check,
+                  size: 18,
+                  color: _selectedCategory == null ? AppTheme.navy : AppTheme.primary,
+                ),
+              const SizedBox(width: 8),
+              Text(
+                _selectedCategory ?? 'Filter by Category',
+                style: TextStyle(
+                  color: _selectedCategory == null ? AppTheme.navy : AppTheme.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
+            ],
+          ),
+        ),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedCategory ?? 'All',
-          icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-          isExpanded: true,
-          style: const TextStyle(
-            color: AppTheme.navy,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-          onChanged: _onCategoryChanged,
-          items: [
-            const DropdownMenuItem(
-              value: 'All',
-              child: Text('All Categories'),
-            ),
-            
-            if (trades.isNotEmpty) ...[
-              const DropdownMenuItem(
-                enabled: false,
-                child: Text(
-                  'TRADES',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              ...buildItems(trades),
-            ],
+    );
+  }
 
-            if (professionals.isNotEmpty) ...[
-              const DropdownMenuItem(
-                enabled: false,
-                child: Text(
-                  'PROFESSIONAL',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              ...buildItems(professionals),
-            ],
-
-            if (equipment.isNotEmpty) ...[
-              const DropdownMenuItem(
-                enabled: false,
-                child: Text(
-                  'EQUIPMENT',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              ...buildItems(equipment),
-            ],
-          ],
+  void _showCategorySelector() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (_, controller) => CategorySelector(
+          categories: _categories,
+          selectedCategory: _selectedCategory,
+          onCategorySelected: (category) {
+            setState(() {
+              _selectedCategory = category;
+              _filteredTasks = _applyFilter(_tasks);
+              _selectedTask = null;
+            });
+          },
         ),
       ),
     );

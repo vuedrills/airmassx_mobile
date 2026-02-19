@@ -62,6 +62,15 @@ class ProRegistrationPortfolioUpdated extends ProRegistrationEvent {
   List<Object?> get props => [portfolioItems];
 }
 
+class ProRegistrationCustomCategoriesUpdated extends ProRegistrationEvent {
+  final List<String> customCategories;
+
+  const ProRegistrationCustomCategoriesUpdated(this.customCategories);
+
+  @override
+  List<Object?> get props => [customCategories];
+}
+
 class ProRegistrationQualificationAdded extends ProRegistrationEvent {
   final String name;
   final String courseName;

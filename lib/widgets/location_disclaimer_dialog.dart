@@ -20,16 +20,16 @@ class LocationDisclaimerDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Airmass Xpress collects location data to enable the following features when the app is in use:',
+              'Airmass Xpress uses your device\'s location to:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),
-            _BulletPoint('Find tasks and equipment near you'),
-            _BulletPoint('Connect you with local service providers'),
-            _BulletPoint('Verify task locations for specialized work'),
+            _BulletPoint('Get your current location to set as your primary location'),
+            _BulletPoint('Show you jobs and tasks near your location'),
+            _BulletPoint('Help clients find service providers in their area'),
             SizedBox(height: 12),
             Text(
-              'This data is also used to support ads.',
+              'Your location is only accessed when you use the app.',
             ),
           ],
         ),

@@ -22,7 +22,7 @@ class StepProfessions extends StatefulWidget {
 }
 
 class _StepProfessionsState extends State<StepProfessions> with TickerProviderStateMixin {
-  final Map<String, List<String>> _customProfessionsPerSection = {};
+
 
   late AnimationController _animationController;
   late List<Animation<double>> _fadeAnimations;
@@ -83,26 +83,13 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
         updatedIds.add(profession);
       }
     } else {
+
       updatedIds.remove(profession);
     }
     bloc.add(ProRegistrationProfessionsUpdated(updatedIds));
   }
 
-  void _addCustomProfession(String profession, String sectionTitle) {
-    if (profession.trim().isEmpty) return;
-    final cleanName = profession.trim();
-    
-    setState(() {
-      if (!_customProfessionsPerSection.containsKey(sectionTitle)) {
-        _customProfessionsPerSection[sectionTitle] = [];
-      }
-      if (!_customProfessionsPerSection[sectionTitle]!.contains(cleanName)) {
-        _customProfessionsPerSection[sectionTitle]!.add(cleanName);
-      }
-    });
-    
-    _toggleProfession(cleanName, true);
-  }
+
 
 
 
@@ -258,36 +245,39 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
     // Cast to List<Category>
     final categories = mainProfessions.cast<dynamic>().map((e) => e as dynamic).toList();
     
-    // Find the "Other" category object
+    // Find the "Other" category object for this specific section
     final otherCategory = categories.firstWhere(
-      (c) => c.name == 'Other',
+      (c) => c.name.toLowerCase().contains('other'),
       orElse: () => null,
     );
 
     // Get selected items from custom additions
-    final customForThisSection = _customProfessionsPerSection[sectionTitle] ?? [];
+
     
     // Get all selected items that belong to "Other" subcategories OR are custom
     // We need to check if selected ID matches any child of otherCategory
     
-    List<String> subcategoryNames = [];
+    Map<String, String> subcategoryIdToName = {};
     if (otherCategory != null) {
         final bloc = context.read<CategoryBloc>();
         if (bloc.state is CategoryLoaded) {
              final subcats = (bloc.state as CategoryLoaded).getSubCategories(otherCategory.id);
-             subcategoryNames = subcats.map((c) => c.name).toList();
+             for (var c in subcats) {
+                 subcategoryIdToName[c.id] = c.name;
+             }
         }
     }
 
+    // Filter user's selected IDs to find those that belong to THIS section's "Other" category/subcategories
     final selectedFromDropdownOrCustom = state.professionIds
-        .where((p) => (subcategoryNames.contains(p) || customForThisSection.contains(p)) && p != 'Other')
+        .where((p) => (subcategoryIdToName.containsKey(p) || 
+                      p == otherCategory?.id))
         .toList();
 
-    // Filter main professions to remove any hardcoded "Other" entries to avoid duplicates
     // Filter main professions to remove "Other" from chips
-    final filteredMainProfessions = categories.where((p) => p.name != 'Other').map((c) => c.name as String).toList();
+    final filteredMainProfessions = categories.where((p) => !p.name.toLowerCase().contains('other')).map((c) => c.name as String).toList();
     
-    // Check if any "Other" items are selected
+    // Check if any "Other" items are selected for this specific section
     final hasOtherSelections = selectedFromDropdownOrCustom.isNotEmpty;
 
     return Container(
@@ -346,49 +336,78 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
                 );
               }),
               
-              // "Other" chip that opens bottom sheet
-              ActionChip(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Other'),
-                    if (hasOtherSelections) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${selectedFromDropdownOrCustom.length}',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                onPressed: () {
+              // "Other" chip logic
+              if (sectionTitle == 'Equipment Hire')
+                // For Equipment Hire, "Other" is a simple toggleable chip
+                FilterChip(
+                  label: const Text('Other'),
+                  selected: state.professionIds.contains(otherCategory?.id),
+                  onSelected: (selected) {
                     if (otherCategory != null) {
-                        _showOtherOptionsSheet(context, sectionTitle, otherCategory);
+                      _toggleProfession(otherCategory.id, selected);
                     }
-                },
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                labelStyle: TextStyle(
-                  color: hasOtherSelections ? AppTheme.primary : AppTheme.neutral700,
-                  fontWeight: hasOtherSelections ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 13,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: hasOtherSelections ? AppTheme.primary : Colors.grey[300]!,
+                  },
+                  selectedColor: AppTheme.primary.withValues(alpha: 0.1),
+                  checkmarkColor: AppTheme.primary,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  labelStyle: TextStyle(
+                    color: state.professionIds.contains(otherCategory?.id) ? AppTheme.primary : AppTheme.neutral700,
+                    fontWeight: state.professionIds.contains(otherCategory?.id) ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13,
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: state.professionIds.contains(otherCategory?.id) ? AppTheme.primary : Colors.grey[300]!,
+                    ),
+                  ),
+                  backgroundColor: Colors.white,
+                )
+              else
+                 // For others (Trades, Professionals), "Other" opens bottom sheet
+                ActionChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Other'),
+                      if (hasOtherSelections) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${selectedFromDropdownOrCustom.length}',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  onPressed: () {
+                      final otherCat = categories.firstWhere((c) => c.name.toLowerCase().contains('other'), orElse: () => categories.first);
+                      _showOtherOptionsSheet(context, sectionTitle, otherCat);
+                  },
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  labelStyle: TextStyle(
+                    color: hasOtherSelections ? AppTheme.primary : AppTheme.neutral700,
+                    fontWeight: hasOtherSelections ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: hasOtherSelections ? AppTheme.primary : Colors.grey[300]!,
+                    ),
+                  ),
+                  backgroundColor: hasOtherSelections ? AppTheme.primary.withValues(alpha: 0.1) : Colors.white,
                 ),
-                backgroundColor: hasOtherSelections ? AppTheme.primary.withValues(alpha: 0.1) : Colors.white,
-              ),
             ],
           ),
           
@@ -408,7 +427,7 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(p, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.neutral700)),
+                    Text(p == otherCategory?.id ? 'Other' : (subcategoryIdToName[p] ?? p), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.neutral700)),
                     const SizedBox(width: 4),
                     InkWell(
                       onTap: () => _toggleProfession(p, false),
@@ -432,26 +451,37 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
   void _showOtherOptionsSheet(
     BuildContext context,
     String sectionTitle,
-    dynamic parentCategory, // Category object
+    dynamic otherCategory, // Category object
   ) {
     final bloc = context.read<ProRegistrationBloc>();
     final categoryBloc = context.read<CategoryBloc>();
     
     List<dynamic> subCategories = [];
     if (categoryBloc.state is CategoryLoaded) {
-        subCategories = (categoryBloc.state as CategoryLoaded).getSubCategories(parentCategory.id);
+        subCategories = (categoryBloc.state as CategoryLoaded).getSubCategories(otherCategory.id);
+        subCategories.sort((a, b) {
+          bool aIsOther = a.name.contains('Other');
+          bool bIsOther = b.name.contains('Other');
+          if (aIsOther && !bIsOther) return 1;
+          if (!aIsOther && bIsOther) return -1;
+          return a.name.compareTo(b.name);
+        });
     }
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => BlocProvider.value(
         value: bloc,
-        child: BlocBuilder<ProRegistrationBloc, ProRegistrationState>(
-          builder: (context, state) {
+        child: StatefulBuilder(
+          builder: (context, setState) {
             return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.8,
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -492,81 +522,55 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
                   ),
                   const Divider(height: 1),
                   Flexible(
-                    child: ListView(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      children: [
+                    child: BlocBuilder<ProRegistrationBloc, ProRegistrationState>(
+                        builder: (context, state) {
+                            return ListView(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                            children: [
 
-                          if (subCategories.isEmpty)
-                            const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: Text('No additional categories found.'),
-                            )
-                          else
-                            Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: subCategories.map((cat) {
-                                    final profession = cat.name as String;
-                                    final isSelected = state.professionIds.contains(profession);
-                                    return FilterChip(
-                                    label: Text(profession),
-                                    selected: isSelected,
-                                    onSelected: (selected) => _toggleProfession(profession, selected),
-                                    selectedColor: AppTheme.primary.withValues(alpha: 0.1),
-                                    checkmarkColor: AppTheme.primary,
-                                    visualDensity: VisualDensity.compact,
-                                    labelStyle: TextStyle(
-                                        color: isSelected ? AppTheme.primary : AppTheme.neutral700,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                        fontSize: 13,
+                                if (subCategories.isEmpty)
+                                    const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 20),
+                                        child: Text('No additional categories found.'),
+                                    )
+                                else
+                                    Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                            ...subCategories.map((cat) {
+                                                final professionId = cat.id;
+                                                final professionName = cat.name;
+                                                final isSelected = state.professionIds.contains(professionId);
+                                                return FilterChip(
+                                                    label: Text(professionName),
+                                                    selected: isSelected,
+                                                    onSelected: (selected) => _toggleProfession(professionId, selected),
+                                                    selectedColor: AppTheme.primary.withValues(alpha: 0.1),
+                                                    checkmarkColor: AppTheme.primary,
+                                                    visualDensity: VisualDensity.compact,
+                                                    labelStyle: TextStyle(
+                                                        color: isSelected ? AppTheme.primary : AppTheme.neutral700,
+                                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                                        fontSize: 13,
+                                                    ),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                    shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(12),
+                                                        side: BorderSide(
+                                                            color: isSelected ? AppTheme.primary : Colors.grey[200]!,
+                                                        ),
+                                                    ),
+                                                    backgroundColor: Colors.white,
+                                                );
+                                            }),
+
+                                        ],
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        side: BorderSide(
-                                        color: isSelected ? AppTheme.primary : Colors.grey[200]!,
-                                        ),
-                                    ),
-                                    backgroundColor: Colors.white,
-                                    );
-                                }).toList(),
-                            ),
-                        // Final "Other" section for custom entries
-                        const Padding(
-                          padding: EdgeInsets.only(top: 24, bottom: 10),
-                          child: Text(
-                            'NOT LISTED?',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.neutral500,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: ActionChip(
-                            label: const Text('Other / Custom Service'),
-                            onPressed: () => _showCustomProfessionDialog(sheetContext, sectionTitle),
-                            avatar: const Icon(Icons.add, size: 16, color: AppTheme.primary),
-                            visualDensity: VisualDensity.compact,
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            labelStyle: const TextStyle(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(color: AppTheme.primary),
-                            ),
-                            backgroundColor: AppTheme.primary.withValues(alpha: 0.05),
-                          ),
-                        ),
-                      ],
+                                ],
+                            );
+                        }
                     ),
                   ),
                   Container(
@@ -583,53 +587,8 @@ class _StepProfessionsState extends State<StepProfessions> with TickerProviderSt
                 ],
               ),
             );
-          },
+          }
         ),
-      ),
-    );
-  }
-
-  void _showCustomProfessionDialog(BuildContext context, String sectionTitle) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Add Custom ${sectionTitle.contains('Trade') ? 'Trade' : 'Service'}',
-          style: GoogleFonts.oswald(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.navy),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(
-            hintText: 'Enter name (e.g. Interior Designer)',
-            hintStyle: TextStyle(color: Colors.grey[400]),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-            filled: true,
-            fillColor: AppTheme.neutral100,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.neutral500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                _addCustomProfession(controller.text, sectionTitle);
-                Navigator.pop(dialogContext);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-               backgroundColor: AppTheme.navy,
-               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Add', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

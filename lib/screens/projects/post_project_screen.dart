@@ -10,7 +10,8 @@ import '../../config/theme.dart';
 import '../../constants/projects.dart';
 import '../../core/service_locator.dart';
 import '../../services/api_service.dart';
-import '../../widgets/enhanced_location_picker.dart';
+import '../../widgets/posting_location_picker.dart';
+import '../../widgets/pro_registration_location_picker.dart';
 
 class PostProjectScreen extends StatelessWidget {
   const PostProjectScreen({super.key});
@@ -411,7 +412,9 @@ class _StepLocation extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateTaskBloc, CreateTaskState>(
       builder: (context, state) {
-        final canContinue = state.location.isNotEmpty && state.city != null && state.suburb != null;
+        final canContinue = state.location.isNotEmpty &&
+            state.latitude != null && state.longitude != null &&
+            state.latitude != 0 && state.longitude != 0;
 
         return Column(
           children: [
@@ -427,22 +430,25 @@ class _StepLocation extends StatelessWidget {
                         subtitle: '',
                       ),
                     ),
-                    EnhancedLocationPicker(
-                      initialAddress: state.location,
-                      initialLat: state.latitude,
-                      initialLng: state.longitude,
-                      onLocationSelected: (result) {
-                        context.read<CreateTaskBloc>().add(
-                          CreateTaskLocationChanged(
-                            result.fullAddress,
-                            latitude: result.latitude,
-                            longitude: result.longitude,
-                            city: result.city,
-                            suburb: result.suburb,
-                            addressDetails: result.addressDetails,
-                          ),
-                        );
-                      },
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: PostingLocationPicker(
+                        initialAddress: state.location,
+                        initialLat: state.latitude,
+                        initialLng: state.longitude,
+                        onLocationSelected: (result) {
+                          context.read<CreateTaskBloc>().add(
+                            CreateTaskLocationChanged(
+                              result.fullAddress,
+                              latitude: result.latitude,
+                              longitude: result.longitude,
+                              city: result.city,
+                              suburb: result.suburb,
+                              addressDetails: result.addressDetails,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -496,7 +502,7 @@ class _StepBudgetTimingState extends State<_StepBudgetTiming> {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateTaskBloc, CreateTaskState>(
       builder: (context, state) {
-        final canContinue = state.budget > 0;
+        final canContinue = state.budget > 0 && state.date != null;
 
         return Column(
           children: [

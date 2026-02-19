@@ -210,7 +210,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: const Text(
-                                  'CONTRACTOR',
+                                  'PROJECT',
                                   style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
                                 ),
                               ),
@@ -759,11 +759,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
 
         // Determine which card to show
         if (status == 'completed') {
-          // Task is completed - show review prompt for poster
-          if (isPoster) {
-            return _buildReviewCard(context, task);
-          }
           return _buildCompletedCard(context);
+        } else if (status == 'cancelled') {
+          return _buildCancelledCard(context);
         } else if (status == 'assigned') {
           // Task is assigned
           if (isAssignedTasker) {
@@ -782,6 +780,52 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
           return _buildMakeOfferCard(context, task);
         }
       },
+    );
+  }
+
+  Widget _buildCancelledCard(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.of(context).padding.bottom + 16,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cancel_outlined, color: Colors.grey.shade600, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Task Cancelled',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const Text(
+                      'This task is no longer active',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -866,11 +910,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                 value: task.siteReadiness!,
                 color: Colors.indigo,
               ),
+            if (task.timelineStart != null)
+              _SpecPill(
+                icon: Icons.event,
+                label: 'Start Date',
+                value: DateFormat('d MMM yyyy').format(task.timelineStart!),
+                color: Colors.green,
+              ),
             if (task.timelineEnd != null)
               _SpecPill(
                 icon: Icons.event_available,
                 label: 'Target End',
-                value: DateFormat('MMM yyyy').format(task.timelineEnd!),
+                value: DateFormat('d MMM yyyy').format(task.timelineEnd!),
                 color: Colors.blue,
               ),
           ],
@@ -1651,46 +1702,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
 
         const SizedBox(height: 24),
 
-        // Cancellation info
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'What happens when a task is cancelled',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0E1638),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'If you are responsible for cancelling this task, a Cancellation fee may be deducted from your next payment payout(s).',
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Learn more',
-                  style: TextStyle(
-                    color: AppTheme.navy,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+
       ],
     );
   }
@@ -1715,17 +1727,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
             ),
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                IconButton(
-                  onPressed: () {
-                    // TODO: Image attachment
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Image attachment coming soon')),
-                    );
-                  },
-                  icon: Icon(Icons.image_outlined, color: Colors.grey.shade600),
-                ),
                 ElevatedButton(
                   onPressed: () => _sendQuestion(),
                   style: ElevatedButton.styleFrom(
@@ -1879,37 +1882,111 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
 
   void _showReplyDialog(Question question) {
     final TextEditingController replyController = TextEditingController();
-    showDialog(
+    
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reply to Question'),
-        content: TextField(
-          controller: replyController,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'Type your reply...',
-            border: OutlineInputBorder(),
-          ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (replyController.text.trim().isNotEmpty) {
-                _questionBloc.add(AnswerQuestion(
-                  taskId: widget.taskId,
-                  questionId: question.id,
-                  answer: replyController.text.trim(),
-                ));
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Send'),
-          ),
-        ],
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                   const Text(
+                    'Reply to Question',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.navy,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  TextField(
+                    controller: replyController,
+                    maxLines: 4,
+                    minLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Type your reply...',
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.primary),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  ElevatedButton(
+                    onPressed: () {
+                      if (replyController.text.trim().isNotEmpty) {
+                        _questionBloc.add(AnswerQuestion(
+                          taskId: widget.taskId,
+                          questionId: question.id,
+                          answer: replyController.text.trim(),
+                        ));
+                        Navigator.pop(context);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Send Reply',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1940,7 +2017,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   }
 
   String _formatTaskDate(dynamic task) {
-    // Check for dateType first
+    // Check for project timeline dates first
+    final timelineStart = task.timelineStart as DateTime?;
+    final timelineEnd = task.timelineEnd as DateTime?;
+    
+    if (timelineStart != null && timelineEnd != null) {
+      return '${DateFormat('d MMM yyyy').format(timelineStart)} – ${DateFormat('d MMM yyyy').format(timelineEnd)}';
+    } else if (timelineStart != null) {
+      return 'From ${DateFormat('d MMM yyyy').format(timelineStart)}';
+    } else if (timelineEnd != null) {
+      return 'By ${DateFormat('d MMM yyyy').format(timelineEnd)}';
+    }
+
+    // Check for dateType
     final dateType = task.dateType as String?;
     final deadline = task.deadline as DateTime?;
     final timeOfDay = task.timeOfDay as String?;

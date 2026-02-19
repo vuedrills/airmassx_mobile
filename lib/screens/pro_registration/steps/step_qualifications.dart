@@ -725,7 +725,8 @@ class _StepQualificationsState extends State<StepQualifications> with TickerProv
         final picker = ImagePicker();
         final image = await picker.pickImage(
           source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
-          imageQuality: 80,
+          imageQuality: 70,
+          maxWidth: 1920,
         );
         if (image != null) {
           file = File(image.path);

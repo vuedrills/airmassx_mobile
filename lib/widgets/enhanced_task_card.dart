@@ -67,19 +67,16 @@ class EnhancedTaskCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Hero(
-                      tag: 'task_title_${task.id}',
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: Text(
-                          task.title,
-                          style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            height: 1.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Text(
+                        task.title,
+                        style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          height: 1.3,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),

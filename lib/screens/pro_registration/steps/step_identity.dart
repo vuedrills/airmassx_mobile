@@ -83,7 +83,7 @@ class _StepIdentityState extends State<StepIdentity> with TickerProviderStateMix
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Upload a clear photo of your ID document (front) for verification.',
+                        'Upload a clear photo of your National ID document (front) for verification.',
                         style: TextStyle(
                           color: AppTheme.neutral600,
                           fontSize: 14,
@@ -104,12 +104,12 @@ class _StepIdentityState extends State<StepIdentity> with TickerProviderStateMix
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('ID Document *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.navy)),
+                      const Text('National ID Document *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.navy)),
                       const SizedBox(height: 12),
                       _buildUploadCard(
                         context,
-                        title: 'Front of ID',
-                        subtitle: 'Upload the front side of your ID',
+                        title: 'Front of National ID',
+                        subtitle: 'Upload the front side of your National ID',
                         hasImage: state.idDocumentUrls.isNotEmpty,
                         isUploading: _isUploading && _uploadingType == 'id_front',
                         onTap: () => _pickAndUploadImage(context, type: 'id_front'),

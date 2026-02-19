@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:geolocator/geolocator.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
 import '../services/api_service.dart';
@@ -51,6 +51,9 @@ class GeocodingService {
   static const double defaultLat = -17.8252;
   static const double defaultLng = 31.0335;
 
+  // Cache for map provider
+  String? _cachedProvider;
+
   // Google Places API Key (Should be fetched securely or from config via native bridge if possible, 
   // but for Dart direct HTTP calls we need it here. However, using native GooglePlacesPlugin is better practice.
   // For simplicity and quick hybrid toggle, we'll try to use the key passed from native config or hardcoded here as fallback
@@ -59,13 +62,24 @@ class GeocodingService {
   final _uuid = const Uuid();
 
 
+  /// Get map provider with caching
+  Future<String> _getProvider() async {
+    if (_cachedProvider != null) return _cachedProvider!;
+    try {
+      final apiService = getIt<ApiService>();
+      _cachedProvider = await apiService.getMapProvider();
+    } catch (e) {
+      debugPrint('Error fetching map provider: $e');
+      _cachedProvider = 'google'; // Default fallback
+    }
+    return _cachedProvider!;
+  }
+
   /// Search for places with hybrid logic (Google vs OSM)
   Future<List<PlaceResult>> searchPlaces(String query, {String? sessionToken}) async {
     if (query.length < 3) return [];
 
-    // Check Global Setting
-    final apiService = getIt<ApiService>();
-    final provider = await apiService.getMapProvider();
+    final provider = await _getProvider();
 
     if (provider == 'google') {
         return _searchWithGoogle(query, sessionToken);
@@ -113,15 +127,13 @@ class GeocodingService {
         body: json.encode({
           "input": query,
           "sessionToken": token,
-          "locationRestriction": {
+          "includedRegionCodes": ["ZW"],
+          "locationBias": {
             "circle": {
-              "center": {
-                "latitude": defaultLat,
-                "longitude": defaultLng
-              },
-              "radius": 50000.0 // 50km radius (Max allowed by API is 50,000)
+              "center": {"latitude": -17.8252, "longitude": 31.0335},
+              "radius": 50000.0,
             }
-          }
+          },
         }),
       );
 
@@ -142,14 +154,6 @@ class GeocodingService {
         final mainText = text['text'];
         final secondaryText = placePrediction['structuredFormat']['secondaryText']['text'];
         
-        // We don't get lat/lng from Autocomplete directly, we get a Place ID.
-        // For the purpose of the UI list, we return 0,0 and fetch details later if needed.
-        // Or we use the Geocoding API to get details on selection.
-        // But our EnhancedLocationPicker expects lat/lng immediately for some logic?
-        // Actually, Autocomplete just gives text. We need a second call "Get Place Details" to get Lat/Lng.
-        // To save costs/complexity, implementing "Get Details" is another step.
-        // For now, let's look at how to fit this into PlaceResult.
-        
         return PlaceResult(
           label: mainText,
           displayName: '$mainText, $secondaryText',
@@ -160,9 +164,6 @@ class GeocodingService {
         );
       }).toList();
 
-      // WAIT: Google Autocomplete returns Place IDs. To get Lat/Lng, we MUST call "Get Place Details" (Free if only asking for IDs/Location).
-      // If we don't return Lat/Lng, the map won't move when user selects a suggestion.
-      // Modifying PlaceResult to include placeId is best.
     } catch (e) {
       print('Google Search Error: $e');
       return [];
@@ -171,7 +172,8 @@ class GeocodingService {
 
   Future<PlaceResult?> getGooglePlaceDetails(String placeId) async {
       try {
-          final url = Uri.parse('https://places.googleapis.com/v1/places/$placeId?fields=location,id,displayName&key=$_googleApiKey');
+          // Request formattedAddress and addressComponents to parse city/suburb
+          final url = Uri.parse('https://places.googleapis.com/v1/places/$placeId?fields=location,id,displayName,formattedAddress,addressComponents&key=$_googleApiKey');
           
           // Report usage on detail fetch (selection)
           getIt<ApiService>().reportMapUsage();
@@ -185,12 +187,29 @@ class GeocodingService {
           final data = json.decode(response.body);
           final location = data['location'];
           final displayName = data['displayName']?['text'] ?? '';
+          final formattedAddress = data['formattedAddress'] ?? displayName;
+          final components = data['addressComponents'] as List? ?? [];
           
+          String? city;
+          String? suburb;
+          String? country;
+
+          // Parse address components
+          for (var c in components) {
+            final types = (c['types'] as List? ?? []).cast<String>();
+            if (types.contains('locality')) city = c['longText'];
+            if (types.contains('sublocality') || types.contains('neighborhood')) suburb = c['longText'];
+            if (types.contains('country')) country = c['longText'];
+          }
+
           return PlaceResult(
-              label: displayName,
+              label: formattedAddress, // Use full address as label
               displayName: displayName,
               lat: location['latitude'],
               lng: location['longitude'],
+              city: city,
+              suburb: suburb,
+              country: country,
               placeId: placeId,
           );
       } catch (e) {
@@ -313,6 +332,77 @@ class GeocodingService {
 
   /// Reverse geocode coordinates to get address
   Future<PlaceResult?> reverseGeocode(double lat, double lng) async {
+    final provider = await _getProvider();
+
+    if (provider == 'google') {
+      return _reverseGeocodeWithGoogle(lat, lng);
+    }
+
+    // Default to OSM (Nominatim/Photon)
+    return _reverseGeocodeWithOsm(lat, lng);
+  }
+
+  Future<PlaceResult?> _reverseGeocodeWithGoogle(double lat, double lng) async {
+    try {
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$_googleApiKey'
+      );
+
+      // Report usage
+      getIt<ApiService>().reportMapUsage();
+
+      final response = await http.get(url);
+
+      if (response.statusCode != 200) {
+        print('Google Reverse Geocoding Error: ${response.statusCode}');
+        return null;
+      }
+
+      final data = json.decode(response.body);
+      final results = data['results'] as List? ?? [];
+
+      if (results.isEmpty) return null;
+
+      final result = results.first;
+      final formattedAddress = result['formatted_address'] ?? '';
+      final components = result['address_components'] as List? ?? [];
+
+      String? city;
+      String? suburb;
+      String? country;
+
+      for (var c in components) {
+        final types = (c['types'] as List? ?? []).cast<String>();
+        if (types.contains('locality')) city = c['long_name'];
+        if (types.contains('sublocality') || types.contains('neighborhood')) suburb = c['long_name'];
+        if (types.contains('country')) country = c['long_name'];
+      }
+
+      // If city is missing, try administrative_area_level_2 or 1
+      if (city == null) {
+         for (var c in components) {
+            final types = (c['types'] as List? ?? []).cast<String>();
+            if (types.contains('administrative_area_level_2')) city = c['long_name'];
+         }
+      }
+
+      return PlaceResult(
+        label: formattedAddress,
+        displayName: formattedAddress,
+        lat: lat,
+        lng: lng,
+        city: city,
+        suburb: suburb,
+        country: country,
+        placeId: result['place_id'],
+      );
+    } catch (e) {
+      print('Google Reverse Geocoding Exception: $e');
+      return null;
+    }
+  }
+
+  Future<PlaceResult?> _reverseGeocodeWithOsm(double lat, double lng) async {
     try {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse'
@@ -321,12 +411,15 @@ class GeocodingService {
 
       final response = await http.get(
         url,
-        headers: {'User-Agent': 'AirmassXpress-Mobile/1.0'},
+        headers: {
+          'User-Agent': 'AirmassXpress-Mobile/1.0',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         print('Nominatim reverse geocode error: ${response.statusCode}');
-        return null;
+        return await _reverseGeocodeWithPhoton(lat, lng);
       }
 
       final data = json.decode(response.body);
@@ -357,8 +450,8 @@ class GeocodingService {
         country: address['country'],
       );
     } catch (e) {
-      print('Reverse geocoding error: $e');
-      return null;
+      print('Nominatim reverse error: $e. Falling back to Photon.');
+      return await _reverseGeocodeWithPhoton(lat, lng);
     }
   }
 
@@ -395,13 +488,60 @@ class GeocodingService {
         return position;
       }
 
-      // Get current position (can be slow on emulators)
+      // Get current position
+      // We use 'balanced' accuracy which is approximate (100m) and battery friendly.
+      // This is sufficient for setting a job location and less likely to trigger
+      // the high-accuracy system dialogs if GPS is weak.
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low, // Lower accuracy is faster
-        timeLimit: const Duration(seconds: 5),
+        desiredAccuracy: LocationAccuracy.medium, 
+        timeLimit: const Duration(seconds: 10),
       );
     } catch (e) {
       print('Error getting current location: $e');
+      return null;
+    }
+  }
+
+  Future<PlaceResult?> _reverseGeocodeWithPhoton(double lat, double lng) async {
+    try {
+      final url = Uri.parse('https://photon.komoot.io/reverse?lat=$lat&lon=$lng');
+      
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode != 200) {
+        print('Photon reverse error: ${response.statusCode}');
+        return null;
+      }
+      
+      final data = json.decode(response.body);
+      final features = data['features'] as List? ?? [];
+      
+      if (features.isEmpty) return null;
+      
+      final feature = features.first;
+      final props = feature['properties'] ?? {};
+      
+      final parts = [
+        props['name'],
+        props['street'],
+        props['city'] ?? props['town'] ?? props['village'],
+        props['state'], 
+        props['country']
+      ].where((p) => p != null && p.toString().isNotEmpty).toList();
+
+      final displayName = parts.isNotEmpty ? parts.join(', ') : 'Unknown Location';
+
+      return PlaceResult(
+        label: displayName,
+        displayName: displayName,
+        lat: lat,
+        lng: lng,
+        city: props['city'] ?? props['town'] ?? props['village'],
+        suburb: props['district'] ?? props['suburb'] ?? props['locality'],
+        country: props['country'],
+      );
+    } catch (e) {
+      print('Photon reverse catch error: $e');
       return null;
     }
   }

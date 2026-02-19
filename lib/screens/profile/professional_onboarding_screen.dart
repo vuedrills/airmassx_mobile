@@ -239,6 +239,7 @@ class _ProfessionalOnboardingScreenState extends State<ProfessionalOnboardingScr
       final XFile? image = await picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 70,
+        maxWidth: 1920,
       );
       
       if (image == null) return;

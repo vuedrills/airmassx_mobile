@@ -58,6 +58,7 @@ class Task {
   final String status;
   final String? assignedTo;
   final DateTime createdAt;
+  final DateTime? updatedAt;
   final String taskType; // 'service', 'equipment'
   
   // Additional fields for UI
@@ -117,6 +118,7 @@ class Task {
     required this.status,
     this.assignedTo,
     required this.createdAt,
+    this.updatedAt,
     this.taskType = 'service',
     this.posterName,
     this.posterImage,
@@ -184,6 +186,7 @@ class Task {
       status: json['status'] as String,
       assignedTo: json['assigned_to'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: _parseDateTime(json['updated_at']),
       taskType: json['task_type'] as String? ?? 'service',
       posterName: json['poster_name'] as String?,
       posterImage: json['poster_image'] as String?,

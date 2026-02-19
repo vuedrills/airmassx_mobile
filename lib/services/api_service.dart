@@ -162,10 +162,10 @@ class ApiService {
   Future<String> getMapProvider() async {
     try {
       final data = await _get('/settings/map-provider');
-      return data['provider'] ?? 'osm';
+      return data['provider'] ?? 'google';
     } catch (e) {
       debugPrint('Error fetching map provider: $e');
-      return 'osm';
+      return 'google';
     }
   }
 
@@ -303,7 +303,7 @@ class ApiService {
         e.type == DioExceptionType.sendTimeout) {
       message = 'Connection timed out. Please check your internet.';
     } else if (e.type == DioExceptionType.connectionError) {
-      message = 'Unable to connect to server. Please check your internet.';
+      message = 'Unable to connect. Please check your internet.';
     } else if (e.response?.data != null && e.response?.data is Map) {
       message = e.response?.data['error'] ?? e.message ?? 'Unknown error';
       code = e.response?.data['code'];
@@ -767,10 +767,7 @@ class ApiService {
         return _mapOffer(response.data);
       }
     } on DioException catch (e) {
-      final message = e.response?.data is Map 
-          ? e.response?.data['error'] ?? e.message 
-          : e.message;
-      throw Exception(message);
+      throw _handleDioError(e);
     } catch (e) {
       rethrow;
     }
@@ -1824,6 +1821,9 @@ class ApiException implements Exception {
       case 402:
         return 'Insufficient wallet balance. Please top up your wallet.';
       case 403:
+        if (message.isNotEmpty && message != 'Unknown error' && !message.contains('Network error')) {
+          return message;
+        }
         return 'You don\'t have permission for this action.';
       case 404:
         return 'The requested item was not found.';

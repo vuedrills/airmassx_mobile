@@ -9,7 +9,11 @@ import '../../config/theme.dart';
 import '../../constants/equipment.dart';
 import '../../core/service_locator.dart';
 import '../../services/api_service.dart';
-import '../../widgets/enhanced_location_picker.dart';
+import '../../bloc/category/category_bloc.dart';
+import '../../bloc/category/category_state.dart';
+import '../../models/category.dart' as models;
+import '../../widgets/posting_location_picker.dart';
+import '../../widgets/pro_registration_location_picker.dart';
 
 
 /// Equipment Request Screen - Award-winning UX for posting equipment hire requests
@@ -280,62 +284,137 @@ class _StepMachineSpecsState extends State<_StepMachineSpecs> {
                           ),
                         ],
                       ),
-                      child: DropdownButtonFormField<String>(
-                        value: state.categories.isEmpty ? null : state.categories.first,
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(
-                            selectedType?.icon ?? Icons.construction,
-                            color: AppTheme.primary,
-                          ),
-                          hintText: 'Select equipment type',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                        dropdownColor: Colors.white,
-                        isExpanded: true,
-                        menuMaxHeight: 400,
-                        icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.primary),
-                        // Show only text when selected (icon is in prefixIcon)
-                        selectedItemBuilder: (context) {
-                          return equipmentTypes.map((type) {
-                            return Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                type.name,
-                                style: const TextStyle(fontWeight: FontWeight.w500),
-                                overflow: TextOverflow.ellipsis,
+                      child: BlocBuilder<CategoryBloc, CategoryState>(
+                        builder: (context, catState) {
+                          if (catState is CategoryLoading || catState is CategoryInitial) {
+                            return DropdownButtonFormField<String>(
+                              items: const [],
+                              onChanged: null,
+                              decoration: InputDecoration(
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                                hintText: 'Loading equipment types...',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               ),
                             );
-                          }).toList();
-                        },
-                        items: equipmentTypes.map((type) {
-                          return DropdownMenuItem(
-                            value: type.name,
-                            child: Row(
-                              children: [
-                                Icon(type.icon, size: 20, color: AppTheme.primary),
-                                const SizedBox(width: 12),
-                                Expanded(
+                          }
+
+                          final categories = catState is CategoryLoaded 
+                              ? catState.getEquipmentCategories() 
+                              : <models.Category>[];
+                          
+                          // Ensure 'Other' items are at the end if they exist
+                          final normalCats = categories.where((c) => !c.name.toLowerCase().contains('other')).toList();
+                          final otherCats = categories.where((c) => c.name.toLowerCase().contains('other')).toList();
+                          final sortedCats = [...normalCats, ...otherCats];
+
+                          // Find the selected category object to get its icon
+                          final currentCategoryName = state.categories.isNotEmpty ? state.categories.first : '';
+                          final selectedCatObj = sortedCats.where((c) => c.name == currentCategoryName).firstOrNull;
+
+                          return DropdownButtonFormField<String>(
+                            value: state.categories.isEmpty ? null : state.categories.first,
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(
+                                selectedCatObj?.icon ?? Icons.construction,
+                                color: AppTheme.primary,
+                              ),
+                              hintText: 'Select equipment type',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                            dropdownColor: Colors.white,
+                            isExpanded: true,
+                            menuMaxHeight: 400,
+                            icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.primary),
+                            // Show only text when selected (icon is in prefixIcon)
+                            selectedItemBuilder: (context) {
+                              return sortedCats.map<Widget>((cat) {
+                                return Align(
+                                  alignment: Alignment.centerLeft,
                                   child: Text(
-                                    type.name,
+                                    cat.name,
                                     style: const TextStyle(fontWeight: FontWeight.w500),
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                );
+                              }).toList();
+                            },
+                            items: sortedCats.map((cat) {
+                              return DropdownMenuItem<String>(
+                                value: cat.name,
+                                child: Row(
+                                  children: [
+                                    Icon(cat.icon, size: 20, color: AppTheme.primary),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        cat.name,
+                                        style: const TextStyle(fontWeight: FontWeight.w500),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                context.read<CreateTaskBloc>().add(CreateTaskCategoryToggled(value));
+                              }
+                            },
                           );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            context.read<CreateTaskBloc>().add(CreateTaskCategoryToggled(value));
-                          }
                         },
                       ),
                     ),
+                    
+                    // Custom Equipment Name (shown when 'Other Equipment' is selected)
+                    if (state.categories.isNotEmpty && 
+                        state.categories.first.toLowerCase().contains('other equipment')) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextFormField(
+                          initialValue: state.otherEquipmentDescription,
+                          decoration: InputDecoration(
+                            hintText: 'Enter equipment name (e.g. Trencher)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            prefixIcon: Icon(Icons.edit, color: AppTheme.primary),
+                          ),
+                          onChanged: (value) {
+                            context.read<CreateTaskBloc>().add(CreateTaskOtherEquipmentDescriptionChanged(value));
+                          },
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
 
                     // Manual Capacity / Size Selection
@@ -564,21 +643,23 @@ class _StepLocation extends StatelessWidget {
         return Column(
           children: [
             Expanded(
-              child: EnhancedLocationPicker(
-                initialAddress: state.location.isNotEmpty ? state.location : null,
-                initialLat: state.latitude,
-                initialLng: state.longitude,
-                initialCity: state.city,
-                onLocationSelected: (result) {
-                  context.read<CreateTaskBloc>().add(CreateTaskLocationChanged(
-                    result.fullAddress,
-                    latitude: result.latitude,
-                    longitude: result.longitude,
-                    city: result.city,
-                    suburb: result.suburb,
-                    addressDetails: result.addressDetails,
-                  ));
-                },
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: PostingLocationPicker(
+                  initialAddress: state.location.isNotEmpty ? state.location : null,
+                  initialLat: state.latitude,
+                  initialLng: state.longitude,
+                  onLocationSelected: (result) {
+                    context.read<CreateTaskBloc>().add(CreateTaskLocationChanged(
+                      result.fullAddress,
+                      latitude: result.latitude,
+                      longitude: result.longitude,
+                      city: result.city,
+                      suburb: result.suburb,
+                      addressDetails: result.addressDetails,
+                    ));
+                  },
+                ),
               ),
             ),
             _BottomCTA(
@@ -1209,7 +1290,8 @@ class _StepReview extends StatelessWidget {
                   children: [
                     // Equipment Summary Title
                     Text(
-                      state.categories.isNotEmpty ? state.categories.first : 'Equipment',
+                      state.title.isNotEmpty ? state.title : (state.categories.isNotEmpty ? state.categories.first : 'Equipment'),
+                      textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,

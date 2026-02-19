@@ -33,8 +33,8 @@ class MockDataService {
       memberSince: DateTime.now().subtract(const Duration(days: 730)),
       portfolio: [
         const PortfolioItem(
-          id: 'p1',
-          imageUrl: 'https://picsum.photos/id/1/400/300',
+          url: 'https://picsum.photos/id/1/400/300',
+          type: 'image',
           title: 'IKEA Assembly',
           description: 'Assembled a full bedroom set including PAX wardrobe.',
         ),

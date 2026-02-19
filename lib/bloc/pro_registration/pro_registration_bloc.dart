@@ -31,6 +31,7 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
           professionalType: initialProfile?.taskerProfile?.professionalType,
           idDocumentUrls: initialProfile?.taskerProfile?.idDocumentUrls ?? const [],
           professionIds: initialProfile?.taskerProfile?.professionIds ?? const [],
+          customCategories: initialProfile?.taskerProfile?.customCategories ?? const [],
           portfolioItems: initialProfile?.taskerProfile?.portfolioItems ?? const [],
           portfolioUrls: initialProfile?.taskerProfile?.portfolioUrls ?? const [],
           qualifications: initialProfile?.taskerProfile?.qualifications ?? const [],
@@ -50,6 +51,7 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
     on<ProRegistrationQualificationRemoved>(_onQualificationRemoved);
     on<ProRegistrationPaymentUpdated>(_onPaymentUpdated);
     on<ProRegistrationLocationUpdated>(_onLocationUpdated);
+    on<ProRegistrationCustomCategoriesUpdated>(_onCustomCategoriesUpdated);
     on<ProRegistrationSubmitted>(_onSubmitted);
   }
 
@@ -143,6 +145,13 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
     ));
   }
 
+  void _onCustomCategoriesUpdated(
+    ProRegistrationCustomCategoriesUpdated event,
+    Emitter<ProRegistrationState> emit,
+  ) {
+    emit(state.copyWith(customCategories: event.customCategories));
+  }
+
   Future<void> _onSubmitted(
     ProRegistrationSubmitted event,
     Emitter<ProRegistrationState> emit,
@@ -156,7 +165,9 @@ class ProRegistrationBloc extends Bloc<ProRegistrationEvent, ProRegistrationStat
         'professional_type': state.professionalType,
         'ecocash_number': state.ecocashNumber,
         'id_document_urls': state.idDocumentUrls,
+
         'profession_ids': state.professionIds,
+        'custom_categories': state.customCategories,
         'portfolio_items': state.portfolioItems.map((e) => e.toJson()).toList(),
         'portfolio_urls': state.portfolioUrls,
         'qualifications': state.qualifications.map((q) => q.toJson()).toList(),

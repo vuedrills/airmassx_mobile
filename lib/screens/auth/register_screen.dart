@@ -16,6 +16,7 @@ import '../../widgets/brand_icons.dart';
 import '../../services/api_service.dart';
 
 /// Register screen following Airmass Xpress premium design
+/// Two-step flow: 1) Account type selection  2) Sign-up form
 class RegisterScreen extends StatefulWidget {
   final String? accountType;
 
@@ -45,16 +46,24 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    if (widget.accountType == 'pro' || widget.accountType == 'tasker') {
-      _wantsToEarn = true;
+
+    // Default to 'client' (false) unless 'pro' or 'tasker' is specified
+    if (widget.accountType != null) {
+      _wantsToEarn = widget.accountType == 'pro' || widget.accountType == 'tasker';
     }
 
+    _initFormAnimations();
+    _checkGoogleSignInStatus();
+    _animationController.forward();
+  }
+
+  void _initFormAnimations() {
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
 
-    // Staggered animations
+    // Staggered animations for form fields
     _fadeAnimations = List.generate(10, (index) {
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
@@ -72,9 +81,6 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         ),
       );
     });
-
-    _checkGoogleSignInStatus();
-    _animationController.forward();
   }
 
   Future<void> _checkGoogleSignInStatus() async {
@@ -140,8 +146,10 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           ),
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary, size: 20),
-            onPressed: () => context.go('/login'),
             splashRadius: 20,
+            onPressed: () {
+              context.go('/login');
+            },
           ),
         ),
         systemOverlayStyle: SystemUiOverlayStyle.dark,
@@ -163,8 +171,6 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             if (state is AuthAuthenticated) {
               context.read<ProfileBloc>().add(LoadProfile());
               if (_wantsToEarn) {
-                // Navigate to home first, then trigger pro registration flow
-                // This ensures the bottom nav stack is present if they go back
                 context.go('/home?tab=4&action=pro_registration');
               } else {
                 context.go('/home?tab=0');
@@ -180,334 +186,410 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             }
           },
           child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 10),
-                    
-                    // Header
-                    _buildAnimatedWidget(
-                      index: 0,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.secondary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              'JOIN US',
-                              style: TextStyle(
-                                color: AppTheme.secondary.withOpacity(0.8),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Create your\naccount',
-                            style: GoogleFonts.oswald(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.navy,
-                              height: 1.1,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Enter your details to get started',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Account Type Toggle (Moved to Top Priority)
-                    _buildAnimatedWidget(
-                      index: 1,
-                      child: _buildAccountTypeSelector(),
-                    ),
-                    
-                    const SizedBox(height: 24),
-
-                    if (_isGoogleSignInEnabled) ...[
-                      // Social Auth
-                      _buildAnimatedWidget(
-                        index: 2,
-                        child: BlocBuilder<AuthBloc, AuthState>(
-                          builder: (context, state) {
-                            return _buildSocialButton(
-                              context,
-                              label: 'Continue with Google',
-                              icon: Icons.g_mobiledata_outlined,
-                              color: AppTheme.textPrimary,
-                              isLoading: state is AuthLoading,
-                              onTap: () {
-                                context.read<AuthBloc>().add(AuthGoogleLogin());
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // OR Divider
-                      _buildAnimatedWidget(
-                        index: 3,
-                        child: _buildPremiumDivider(text: 'OR SIGN UP WITH EMAIL'),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                    ],
-                    
-                    // Full Name
-                    _buildAnimatedWidget(
-                      index: 4,
-                      child: _buildTextField(
-                        controller: _nameController,
-                        label: 'Full Name',
-                        hint: 'John Doe',
-                        icon: Icons.person_outline,
-                        textCapitalization: TextCapitalization.words,
-                        action: TextInputAction.next,
-                        validator: Validators.name,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Email
-                    _buildAnimatedWidget(
-                      index: 5,
-                      child: _buildTextField(
-                        controller: _emailController,
-                        label: 'Email Address',
-                        hint: 'john@example.com',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        action: TextInputAction.next,
-                        validator: Validators.email,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Password
-                    _buildAnimatedWidget(
-                      index: 6,
-                      child: _buildTextField(
-                        controller: _passwordController,
-                        label: 'Password',
-                        hint: 'Create a strong password',
-                        icon: Icons.lock_outline,
-                        isPassword: true,
-                        isPasswordVisible: _isPasswordVisible,
-                        onVisibilityToggle: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                        action: TextInputAction.done,
-                        validator: Validators.password,
-                        onSubmitted: (_) => _onRegister(),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Terms Checkbox
-                    _buildAnimatedWidget(
-                      index: 7,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _acceptedTerms 
-                             ? AppTheme.primary.withOpacity(0.05) 
-                             : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _acceptedTerms 
-                               ? AppTheme.primary.withOpacity(0.2) 
-                               : Colors.transparent
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: Checkbox(
-                                value: _acceptedTerms,
-                                activeColor: AppTheme.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _acceptedTerms = value ?? false;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                    height: 1.4,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'I accept the ',
-                                      recognizer: TapGestureRecognizer()..onTap = () {
-                                        setState(() {
-                                          _acceptedTerms = !_acceptedTerms;
-                                        });
-                                      },
-                                    ),
-                                    TextSpan(
-                                      text: 'Terms & Conditions',
-                                      style: const TextStyle(
-                                        color: AppTheme.navy,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () => _launchUrl('https://www.airmassxpress.com/terms'),
-                                    ),
-                                    const TextSpan(text: ' and '),
-                                    TextSpan(
-                                      text: 'Privacy Policy',
-                                      style: const TextStyle(
-                                        color: AppTheme.navy,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () => _launchUrl('https://www.airmassxpress.com/privacy_policy'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // Register Button
-                    _buildAnimatedWidget(
-                      index: 8,
-                      child: BlocBuilder<AuthBloc, AuthState>(
-                        builder: (context, state) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withOpacity(0.3),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: state is AuthLoading ? null : _onRegister,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: state is AuthLoading
-                                  ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      _wantsToEarn ? 'Sign Up & Start Earning' : 'Create Account',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 40),
-                    
-                    // Login Link
-                    _buildAnimatedWidget(
-                      index: 9,
-                      child: Center(
-                        child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Colors.grey[600],
-                            ),
-                            children: [
-                              const TextSpan(text: "Already have an account? "),
-                              WidgetSpan(
-                                alignment: PlaceholderAlignment.baseline,
-                                baseline: TextBaseline.alphabetic,
-                                child: InkWell(
-                                  onTap: () => context.go('/login'),
-                                  child: const Text(
-                                    'Log in',
-                                    style: TextStyle(
-                                      color: AppTheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
-            ),
+            child: _buildSignUpFormStep(),
           ),
         ),
       ),
     );
   }
+
+  // =============================================
+  // ACCOUNT TYPE TOGGLE
+  // =============================================
+
+  Widget _buildAccountTypeToggle() {
+    return Container(
+      height: 56, // Fixed height for consistent tap target
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FA), // Neutral light background
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Stack(
+        children: [
+          // Animated Background Pill
+          AnimatedAlign(
+            alignment: _wantsToEarn ? Alignment.centerRight : Alignment.centerLeft,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubicEmphasized,
+            child: FractionallySizedBox(
+              widthFactor: 0.5,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Interactive Labels
+          Row(
+            children: [
+              _buildAnimatedToggleOption(
+                title: 'Client',
+                isSelected: !_wantsToEarn,
+                onTap: () => setState(() => _wantsToEarn = false),
+              ),
+              _buildAnimatedToggleOption(
+                title: 'Service Provider',
+                isSelected: _wantsToEarn,
+                onTap: () => setState(() => _wantsToEarn = true),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedToggleOption({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          alignment: Alignment.center,
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: isSelected ? AppTheme.primary : Colors.grey[500],
+              letterSpacing: 0.3,
+            ),
+            child: Text(title),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =============================================
+  // STEP 1: Sign-Up Form
+  // =============================================
+
+  Widget _buildSignUpFormStep() {
+    return SingleChildScrollView(
+      key: const ValueKey('step1'),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            
+            // Header
+            _buildAnimatedWidget(
+              index: 0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Account type pill indicator removed
+                  const SizedBox(height: 12),
+                  Text(
+                    'Create your account',
+                    style: GoogleFonts.oswald(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.navy,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Enter your details to get started',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildAccountTypeToggle(),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            if (_isGoogleSignInEnabled) ...[
+              // Social Auth
+              _buildAnimatedWidget(
+                index: 1,
+                child: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, state) {
+                    return _buildSocialButton(
+                      context,
+                      label: 'Continue with Google',
+                      icon: Icons.g_mobiledata_outlined,
+                      color: AppTheme.textPrimary,
+                      isLoading: state is AuthLoading,
+                      onTap: () {
+                        context.read<AuthBloc>().add(AuthGoogleLogin());
+                      },
+                    );
+                  },
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // OR Divider
+              _buildAnimatedWidget(
+                index: 2,
+                child: _buildPremiumDivider(text: 'OR SIGN UP WITH EMAIL'),
+              ),
+              
+              const SizedBox(height: 24),
+            ],
+            
+            // Full Name
+            _buildAnimatedWidget(
+              index: 3,
+              child: _buildTextField(
+                controller: _nameController,
+                label: 'Full Name',
+                hint: 'John Doe',
+                icon: Icons.person_outline,
+                textCapitalization: TextCapitalization.words,
+                action: TextInputAction.next,
+                validator: Validators.name,
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Email
+            _buildAnimatedWidget(
+              index: 4,
+              child: _buildTextField(
+                controller: _emailController,
+                label: 'Email Address',
+                hint: 'john@example.com',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                action: TextInputAction.next,
+                validator: Validators.email,
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Password
+            _buildAnimatedWidget(
+              index: 5,
+              child: _buildTextField(
+                controller: _passwordController,
+                label: 'Password',
+                hint: 'Create a strong password',
+                icon: Icons.lock_outline,
+                isPassword: true,
+                isPasswordVisible: _isPasswordVisible,
+                onVisibilityToggle: () {
+                  setState(() {
+                    _isPasswordVisible = !_isPasswordVisible;
+                  });
+                },
+                action: TextInputAction.done,
+                validator: Validators.password,
+                onSubmitted: (_) => _onRegister(),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Terms Checkbox
+            _buildAnimatedWidget(
+              index: 6,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _acceptedTerms 
+                     ? AppTheme.primary.withOpacity(0.05) 
+                     : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _acceptedTerms 
+                       ? AppTheme.primary.withOpacity(0.2) 
+                       : Colors.transparent
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Checkbox(
+                        value: _acceptedTerms,
+                        activeColor: AppTheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _acceptedTerms = value ?? false;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            height: 1.4,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'I accept the ',
+                              recognizer: TapGestureRecognizer()..onTap = () {
+                                setState(() {
+                                  _acceptedTerms = !_acceptedTerms;
+                                });
+                              },
+                            ),
+                            TextSpan(
+                              text: 'Terms & Conditions',
+                              style: const TextStyle(
+                                color: AppTheme.navy,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () => _launchUrl('https://www.airmassxpress.com/terms'),
+                            ),
+                            const TextSpan(text: ' and '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: const TextStyle(
+                                color: AppTheme.navy,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () => _launchUrl('https://www.airmassxpress.com/privacy_policy'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Register Button
+            _buildAnimatedWidget(
+              index: 7,
+              child: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primary.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: state is AuthLoading ? null : _onRegister,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: state is AuthLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              _wantsToEarn ? 'Sign Up & Start Earning' : 'Create Account',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            
+            const SizedBox(height: 40),
+            
+            // Login Link
+            _buildAnimatedWidget(
+              index: 8,
+              child: Center(
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey[600],
+                    ),
+                    children: [
+                      const TextSpan(text: "Already have an account? "),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.baseline,
+                        baseline: TextBaseline.alphabetic,
+                        child: InkWell(
+                          onTap: () => context.go('/login'),
+                          child: const Text(
+                            'Log in',
+                            style: TextStyle(
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // =============================================
+  // SHARED HELPER WIDGETS
+  // =============================================
 
   Future<void> _launchUrl(String url) async {
     if (!await canLaunchUrl(Uri.parse(url))) {
@@ -524,92 +606,6 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       child: SlideTransition(
         position: _slideAnimations[safeIndex],
         child: child,
-      ),
-    );
-  }
-
-  Widget _buildAccountTypeSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppTheme.neutral100,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white),
-      ),
-      child: Row(
-        children: [
-          _buildSelectorOption(
-            title: 'I need help',
-            subtitle: 'Post tasks',
-            icon: Icons.handyman_outlined,
-            isSelected: !_wantsToEarn,
-            onTap: () => setState(() => _wantsToEarn = false),
-          ),
-          const SizedBox(width: 4),
-          _buildSelectorOption(
-            title: 'I want to earn',
-            subtitle: 'Find work',
-            icon: Icons.monetization_on_outlined,
-            isSelected: _wantsToEarn,
-            onTap: () => setState(() => _wantsToEarn = true),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectorOption({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? AppTheme.navy : Colors.grey[500],
-                size: 26,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? AppTheme.navy : Colors.grey[600],
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isSelected ? AppTheme.textSecondary : Colors.grey[400],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

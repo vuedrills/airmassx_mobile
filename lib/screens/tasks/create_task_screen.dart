@@ -6,7 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/location_picker.dart';
-import '../../widgets/enhanced_location_picker.dart';
+import '../../widgets/posting_location_picker.dart';
+import '../../widgets/pro_registration_location_picker.dart'; // For result type
 import '../../widgets/gps_first_location_picker.dart';
 
 import '../../bloc/create_task/create_task_bloc.dart';
@@ -17,7 +18,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/service_locator.dart';
 import '../../config/constants.dart';
 import '../../bloc/category/category_bloc.dart';
-import '../../services/ad_service.dart';
+
 import '../../bloc/category/category_state.dart';
 import '../../bloc/category/category_event.dart';
 
@@ -116,8 +117,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
             _currentStep = 8;
             _pageController.jumpToPage(8);
           });
-          // Show interstitial ad
-          getIt<AdService>().showInterstitialAd();
+
         } else if (state.status == CreateTaskStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.errorMessage ?? 'Failed to post task')),
@@ -317,7 +317,7 @@ class _StepCategoryState extends State<_StepCategory> {
                                         spacing: 8,
                                         runSpacing: 8,
                                         children: [
-                                            ...categories.where((c) => c.name != 'Other').map((cat) {
+                                            ...categories.where((c) => !c.name.toLowerCase().contains('other')).map((cat) {
                                           final isSelected = state.categories.contains(cat.name);
                                           return GestureDetector(
                                             onTap: () {
@@ -343,10 +343,10 @@ class _StepCategoryState extends State<_StepCategory> {
                                           );
                                         }),
                                         // "Other" option for this group
-                                        if (categories.any((c) => c.name == 'Other'))
+                                        if (categories.any((c) => c.name.toLowerCase().contains('other')))
                                             GestureDetector(
                                                 onTap: () {
-                                                    final otherCat = categories.firstWhere((c) => c.name == 'Other');
+                                                    final otherCat = categories.firstWhere((c) => c.name.toLowerCase().contains('other'));
                                                     _showOtherOptionsSheet(context, group, otherCat);
                                                 },
                                                 child: Container(
@@ -426,7 +426,17 @@ class _StepCategoryState extends State<_StepCategory> {
     List<dynamic> subCategories = [];
     if (categoryBloc.state is CategoryLoaded) {
         subCategories = (categoryBloc.state as CategoryLoaded).getSubCategories(parentCategory.id);
+        subCategories.sort((a, b) {
+          bool aIsOther = a.name.contains('Other');
+          bool bIsOther = b.name.contains('Other');
+          if (aIsOther && !bIsOther) return 1;
+          if (!aIsOther && bIsOther) return -1;
+          return a.name.compareTo(b.name);
+        });
     }
+
+    // Controller for custom category input
+    final customCategoryController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -434,113 +444,122 @@ class _StepCategoryState extends State<_StepCategory> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => BlocProvider.value(
         value: createTaskBloc,
-        child: Container(
-        constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-            ),
-        ),
-        child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-                Center(
-                    child: Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                    ),
-                    ),
-                ),
-                Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                    child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                        Text(
-                        'More ${groupName.contains('Trade') ? 'Trades' : 'Services'}',
-                        style: GoogleFonts.oswald(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.navy),
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                  ),
+              ),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                      Center(
+                          child: Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                          ),
+                          ),
+                      ),
+                      Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                          child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                              Text(
+                              'More ${groupName.contains('Trade') ? 'Trades' : 'Services'}',
+                              style: GoogleFonts.oswald(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.navy),
+                              ),
+                              IconButton(
+                              onPressed: () => Navigator.pop(sheetContext),
+                              icon: const Icon(Icons.close),
+                              ),
+                          ],
+                          ),
+                      ),
+                      const Divider(height: 1),
+                      Flexible(
+                          child: BlocBuilder<CreateTaskBloc, CreateTaskState>(
+                              builder: (context, state) {
+                                  return ListView(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                                  children: [
+                                      if (subCategories.isEmpty)
+                                          const Padding(
+                                              padding: EdgeInsets.symmetric(vertical: 20),
+                                              child: Text('No additional categories found.'),
+                                          )
+                                      else
+                                        Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: [
+                                                ...subCategories.map((cat) {
+                                                    final isSelected = state.categories.contains(cat.name);
+                                                    return FilterChip(
+                                                        label: Text(cat.name),
+                                                        selected: isSelected,
+                                                        onSelected: (selected) {
+                                                            context.read<CreateTaskBloc>().add(CreateTaskCategoryToggled(cat.name));
+                                                        },
+                                                        selectedColor: AppTheme.primary.withOpacity(0.1),
+                                                        checkmarkColor: AppTheme.primary,
+                                                        visualDensity: VisualDensity.compact,
+                                                        labelStyle: TextStyle(
+                                                            color: isSelected ? AppTheme.primary : AppTheme.neutral700,
+                                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                                            fontSize: 13,
+                                                        ),
+                                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(12),
+                                                            side: BorderSide(
+                                                                color: isSelected ? AppTheme.primary : Colors.grey[200]!,
+                                                            ),
+                                                        ),
+                                                        backgroundColor: Colors.white,
+                                                    );
+                                                }),
+                                            ],
+                                        ),
+                                    ],
+                                    );
+                                }
+                            ),
                         ),
-                        IconButton(
-                        onPressed: () => Navigator.pop(sheetContext),
-                        icon: const Icon(Icons.close),
+                        // Add a done button
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(sheetContext),
+                              child: const Text('Done'),
+                            ),
+                          ),
                         ),
                     ],
-                    ),
                 ),
-                const Divider(height: 1),
-                Flexible(
-                    child: BlocBuilder<CreateTaskBloc, CreateTaskState>( // Wrap in BlocBuilder
-                        builder: (context, state) {
-                            return ListView(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                            children: [
-                                if (subCategories.isEmpty)
-                                    const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 20),
-                                        child: Text('No additional categories found.'),
-                                    )
-                                else
-                                Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: subCategories.map((cat) {
-                                        final isSelected = state.categories.contains(cat.name);
-                                        return FilterChip(
-                                            label: Text(cat.name),
-                                            selected: isSelected,
-                                            onSelected: (selected) {
-                                                context.read<CreateTaskBloc>().add(CreateTaskCategoryToggled(cat.name));
-                                            },
-                                            selectedColor: AppTheme.primary.withOpacity(0.1),
-                                            checkmarkColor: AppTheme.primary,
-                                            visualDensity: VisualDensity.compact,
-                                            labelStyle: TextStyle(
-                                                color: isSelected ? AppTheme.primary : AppTheme.neutral700,
-                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                                fontSize: 13,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                                side: BorderSide(
-                                                    color: isSelected ? AppTheme.primary : Colors.grey[200]!,
-                                                ),
-                                            ),
-                                            backgroundColor: Colors.white,
-                                        );
-                                    }).toList(),
-                                ),
-                            ],
-                            );
-                        }
-                    ),
-                ),
-                // Add a done button
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(sheetContext),
-                      child: const Text('Done'),
-                    ),
-                  ),
-                ),
-            ],
+              );
+            }
+          ),
         ),
-      ),
-    ),
-  );
-  }
+      );
+    }
 }
 
 // --- Step 1: Title ---
@@ -1146,29 +1165,52 @@ class _StepLocation extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: EnhancedLocationPicker(
-                initialAddress: state.location,
-                initialLat: state.latitude,
-                initialLng: state.longitude,
-                onLocationSelected: (result) {
-                  context.read<CreateTaskBloc>().add(CreateTaskLocationChanged(
-                        result.fullAddress,
-                        latitude: result.latitude,
-                        longitude: result.longitude,
-                        city: result.city,
-                        suburb: result.suburb,
-                        addressDetails: result.addressDetails,
-                      ));
-                },
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: PostingLocationPicker(
+                  initialAddress: state.location,
+                  initialLat: state.latitude,
+                  initialLng: state.longitude,
+                  onLocationSelected: (result) {
+                    context.read<CreateTaskBloc>().add(CreateTaskLocationChanged(
+                          result.fullAddress,
+                          latitude: result.latitude,
+                          longitude: result.longitude,
+                          city: result.city,
+                          suburb: result.suburb,
+                          addressDetails: result.addressDetails,
+                        ));
+                  },
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: state.location.isNotEmpty ? onNext : null,
-                  child: const Text('Confirm Location'),
+                child: Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: (state.location.isNotEmpty && 
+                                  state.latitude != null && 
+                                  state.longitude != null && 
+                                  state.latitude != 0 && 
+                                  state.longitude != 0) ? onNext : null,
+                      child: const Text('Confirm Location'),
+                    ),
+                    if (state.location.isNotEmpty && (state.latitude == null || state.latitude == 0))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Please select a location from the suggestions or tap on the map.',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                  ],
                 ),
               ).animate(target: state.location.isNotEmpty ? 1 : 0)
                .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 400.ms, curve: Curves.easeOutBack)
@@ -1353,7 +1395,11 @@ class _StepPhotos extends StatelessWidget {
               onTap: () async {
                 Navigator.pop(sheetContext);
                 try {
-                  final XFile? image = await picker.pickImage(source: ImageSource.camera);
+                  final XFile? image = await picker.pickImage(
+                    source: ImageSource.camera,
+                    imageQuality: 70,
+                    maxWidth: 1920,
+                  );
                   if (image != null && context.mounted) {
                     context.read<CreateTaskBloc>().add(CreateTaskPhotoAdded(image.path));
                   }
@@ -1383,7 +1429,10 @@ class _StepPhotos extends StatelessWidget {
               title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () async {
                 Navigator.pop(sheetContext);
-                final List<XFile> images = await picker.pickMultiImage();
+                final List<XFile> images = await picker.pickMultiImage(
+                  imageQuality: 70,
+                  maxWidth: 1920,
+                );
                 if (images.isNotEmpty && context.mounted) {
                   for (var image in images) {
                     context.read<CreateTaskBloc>().add(CreateTaskPhotoAdded(image.path));
@@ -1869,8 +1918,8 @@ class _StepSuccess extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFFB8E6B8),
-            Color(0xFFA8E0A8),
+            Color(0xFFFCE4EC), // Light pink (Pink 50)
+            Color(0xFFF8BBD0), // Slightly deeper pink (Pink 100)
           ],
         ),
       ),
