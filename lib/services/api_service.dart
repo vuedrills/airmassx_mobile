@@ -421,6 +421,17 @@ class ApiService {
     }
   }
 
+  Future<void> deleteAccount() async {
+    try {
+      await _delete('/users/me');
+      await clearTokens();
+      _currentUser = null;
+    } catch (e) {
+      debugPrint('Delete account error: $e');
+      rethrow;
+    }
+  }
+
   Future<void> forgotPassword(String email) async {
     await _post('/auth/forgot-password', {
       'email': email,

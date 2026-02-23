@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
 import '../../config/theme.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_event.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Help & Support screen - FAQ and contact info
 class HelpSupportScreen extends StatelessWidget {
@@ -190,9 +193,7 @@ class HelpSupportScreen extends StatelessWidget {
             context,
             Icons.delete_forever_outlined,
             'Delete Account',
-            () {
-               _launchURL(context, 'https://www.airmassxpress.com/delete-account');
-            },
+            () => _showDeleteAccountDialog(context),
           ),
           
           const SizedBox(height: 40),
@@ -207,6 +208,58 @@ class HelpSupportScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showDeleteAccountDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'Are you sure you want to permanently delete your account? '
+          'This action cannot be undone and you will lose all your data, history, and access.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()),
+        );
+
+        await ApiService().deleteAccount();
+        
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading
+          context.read<AuthBloc>().add(AuthLogout()); // Trigger logout state
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Your account has been deleted.')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete account. Please try again or contact support.')),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _launchURL(BuildContext context, String urlString) async {
