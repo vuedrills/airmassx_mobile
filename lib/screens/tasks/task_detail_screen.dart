@@ -44,6 +44,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/ui_utils.dart';
+import '../../utils/auth_gate.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final String taskId;
@@ -87,11 +88,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     _offerListBloc.add(LoadOffers(taskId: widget.taskId));
     _questionBloc.add(LoadQuestions(widget.taskId));
     
-    // Subscribe to realtime updates
-    _setupRealtimeSubscriptions();
-    
-    // Check if user already has an offer on this task
-    _checkExistingOffer();
+    // Only do auth-dependent operations if authenticated
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      // Subscribe to realtime updates
+      _setupRealtimeSubscriptions();
+      
+      // Check if user already has an offer on this task
+      _checkExistingOffer();
+    } else {
+      // Guest: skip offer check
+      _checkingOffer = false;
+    }
   }
 
   Future<void> _checkExistingOffer() async {
@@ -749,8 +757,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         String? currentUserId;
-        if (authState is AuthAuthenticated) {
+        final isAuthenticated = authState is AuthAuthenticated;
+        if (isAuthenticated) {
           currentUserId = authState.user.id;
+        }
+
+        // Guest users: show a "Sign in to bid" card
+        if (!isAuthenticated) {
+          return _buildGuestActionCard(context, task);
         }
 
         final bool isPoster = currentUserId == task.posterId;
@@ -780,6 +794,73 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
           return _buildMakeOfferCard(context, task);
         }
       },
+    );
+  }
+
+  Widget _buildGuestActionCard(BuildContext context, dynamic task) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 12,
+        bottom: MediaQuery.of(context).padding.bottom + 12,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Task Budget',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                Text(
+                  '\$${task.budget.toStringAsFixed(0)}',
+                  style: GoogleFonts.oswald(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.navy,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          ElevatedButton(
+            onPressed: () => requireAuth(context, 'place a bid on this task'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Place a Bid',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -200,7 +200,7 @@ class HelpSupportScreen extends StatelessWidget {
           
           Center(
             child: Text(
-              'Version 2.1.1',
+              'Version 2.1.2',
               style: TextStyle(color: Colors.grey[400], fontSize: 12),
             ),
           ),

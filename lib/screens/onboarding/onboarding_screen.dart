@@ -108,7 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Let's navigate after a short delay on the last page.
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted && _currentPage == _pages.length - 1) {
-            context.go('/signup');
+            context.go('/home');
           }
         });
       }
@@ -146,13 +146,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         curve: Curves.easeInOut,
       );
     } else {
-      context.go('/signup');
+      context.go('/home');
     }
   }
 
   void _onSkip() {
     _stopAutoPlay();
-    context.go('/signup');
+    context.go('/home');
   }
 
   @override

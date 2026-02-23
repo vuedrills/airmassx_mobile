@@ -326,48 +326,52 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
 
             const SizedBox(height: 32),
 
-            if (Platform.isIOS) ...[
-              _buildAnimatedWidget(
-                index: 1,
-                child: BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, state) {
-                    return _buildSocialButton(
-                      context,
-                      label: 'Continue with Apple',
-                      icon: Icons.apple,
-                      color: Colors.black,
-                      textColor: Colors.white,
-                      backgroundColor: Colors.black,
-                      isLoading: state is AuthLoading,
-                      onTap: () {
-                        context.read<AuthBloc>().add(AuthAppleLogin());
-                      },
-                    );
-                  },
+            if (Platform.isIOS || _isGoogleSignInEnabled) ...[
+              if (Platform.isIOS) ...[
+                _buildAnimatedWidget(
+                  index: 1,
+                  child: BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) {
+                      return _buildSocialButton(
+                        context,
+                        label: 'Continue with Apple',
+                        icon: Icons.apple,
+                        color: Colors.black,
+                        textColor: Colors.white,
+                        backgroundColor: Colors.black,
+                        isLoading: state is AuthLoading,
+                        onTap: () {
+                          context.read<AuthBloc>().add(AuthAppleLogin());
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            if (_isGoogleSignInEnabled) ...[
-              // Social Auth
-              _buildAnimatedWidget(
-                index: 1,
-                child: BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, state) {
-                    return _buildSocialButton(
-                      context,
-                      label: 'Continue with Google',
-                      icon: Icons.g_mobiledata_outlined,
-                      color: AppTheme.textPrimary,
-                      isLoading: state is AuthLoading,
-                      onTap: () {
-                        context.read<AuthBloc>().add(AuthGoogleLogin());
-                      },
-                    );
-                  },
+              ],
+              
+              if (Platform.isIOS && (!Platform.isIOS && _isGoogleSignInEnabled))
+                const SizedBox(height: 16),
+                
+              if (!Platform.isIOS && _isGoogleSignInEnabled) ...[
+                // Social Auth
+                _buildAnimatedWidget(
+                  index: 1,
+                  child: BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) {
+                      return _buildSocialButton(
+                        context,
+                        label: 'Continue with Google',
+                        icon: Icons.g_mobiledata_outlined,
+                        color: AppTheme.textPrimary,
+                        isLoading: state is AuthLoading,
+                        onTap: () {
+                          context.read<AuthBloc>().add(AuthGoogleLogin());
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
               
               const SizedBox(height: 24),
               

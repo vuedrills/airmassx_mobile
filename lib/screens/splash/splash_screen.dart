@@ -101,12 +101,8 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 2000));
 
     if (mounted) {
-      final authState = context.read<AuthBloc>().state;
-      if (authState is AuthAuthenticated) {
-        context.go('/home'); // Go directly to home if authenticated
-      } else {
-        context.go('/welcome'); // Go to welcome screen if not authenticated
-      }
+      // Always navigate to /home - it works for both authenticated and guest users
+      context.go('/home');
     }
   }
 

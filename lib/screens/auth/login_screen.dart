@@ -114,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           ),
           child: IconButton(
             icon: const Icon(Icons.close, color: AppTheme.textPrimary, size: 20),
-            onPressed: () => context.go('/welcome'),
+            onPressed: () => context.go('/home'),
             splashRadius: 20,
           ),
         ),
@@ -185,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
                     const SizedBox(height: 32),
 
-                    if (_isGoogleSignInEnabled) ...[
+                    if (Platform.isIOS || _isGoogleSignInEnabled) ...[
                       // Social Auth (Moved to Top)
                       _buildAnimatedWidget(
                         index: 1,
@@ -208,9 +208,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   );
                                 },
                               ),
-                              const SizedBox(height: 12),
                             ],
-                            if (_isGoogleSignInEnabled)
+                            
+                            if (Platform.isIOS && (!Platform.isIOS && _isGoogleSignInEnabled))
+                              const SizedBox(height: 12),
+                              
+                            if (!Platform.isIOS && _isGoogleSignInEnabled)
                               BlocBuilder<AuthBloc, AuthState>(
                                 builder: (context, state) {
                                   return _buildSocialButton(

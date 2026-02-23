@@ -1,3 +1,4 @@
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +39,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'utils/auth_gate.dart';
 
 import 'models/task.dart' as models;
 
@@ -194,27 +196,35 @@ class _MainScaffoldState extends State<MainScaffold> {
   // Unread counts for badge
   int _unreadCount = 0;
 
+  bool get _isAuthenticated {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated;
+  }
+
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _realtimeService = getIt<RealtimeService>();
-    // Load initial data for ribbon and review modal
-    final taskBloc = context.read<TaskBloc>();
-    taskBloc.add(const TaskLoadActive());
-    taskBloc.add(const TaskLoadPendingReviews());
     
-    // Listen for realtime notifications
-    _setupRealtimeNotificationListener();
-    
-    // Load initial unread count
-    _loadUnreadCount();
+    // Only load account-based data if authenticated
+    if (_isAuthenticated) {
+      final taskBloc = context.read<TaskBloc>();
+      taskBloc.add(const TaskLoadActive());
+      taskBloc.add(const TaskLoadPendingReviews());
+      
+      // Listen for realtime notifications
+      _setupRealtimeNotificationListener();
+      
+      // Load initial unread count
+      _loadUnreadCount();
 
-    // Handle deep link actions
-    if (widget.initialAction == 'pro_registration') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.push('/profile/pro-registration');
-      });
+      // Handle deep link actions
+      if (widget.initialAction == 'pro_registration') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.push('/profile/pro-registration');
+        });
+      }
     }
   }
   
@@ -389,13 +399,40 @@ class _MainScaffoldState extends State<MainScaffold> {
     });
   }
 
-  final List<Widget> _screens = [
-    const HomeTabNavigator(),
-    const WalletScreen(),
-    const MyTasksScreen(),
-    const ConversationsScreen(),
-    const ProfileScreen(),
-  ];
+  List<Widget> get _screens {
+    if (_isAuthenticated) {
+      return const [
+        HomeTabNavigator(),
+        WalletScreen(),
+        MyTasksScreen(),
+        ConversationsScreen(),
+        ProfileScreen(),
+      ];
+    }
+    return const [
+      HomeTabNavigator(),
+      GuestPromptScreen(
+        title: 'Your Wallet',
+        description: 'Sign in to access your wallet, manage payments, and track your earnings.',
+        icon: LucideIcons.wallet,
+      ),
+      GuestPromptScreen(
+        title: 'My Tasks',
+        description: 'Sign in to post tasks, track your jobs, and manage your work.',
+        icon: LucideIcons.clipboardList,
+      ),
+      GuestPromptScreen(
+        title: 'Messages',
+        description: 'Sign in to chat with clients and service providers.',
+        icon: LucideIcons.messageSquare,
+      ),
+      GuestPromptScreen(
+        title: 'Your Profile',
+        description: 'Sign in to manage your profile, settings, and preferences.',
+        icon: LucideIcons.user,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -433,13 +470,15 @@ class _MainScaffoldState extends State<MainScaffold> {
           },
         ),
       ],
-      child: BlocBuilder<TaskBloc, TaskState>(
-        builder: (context, state) {
-          return Scaffold(
-            body: IndexedStack(
-              index: _currentIndex,
-              children: _screens,
-            ),
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          return BlocBuilder<TaskBloc, TaskState>(
+            builder: (context, taskState) {
+              return Scaffold(
+                body: IndexedStack(
+                  index: _currentIndex,
+                  children: _screens,
+                ),
             bottomNavigationBar: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -504,8 +543,10 @@ class _MainScaffoldState extends State<MainScaffold> {
             ),
           );
         },
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }
 

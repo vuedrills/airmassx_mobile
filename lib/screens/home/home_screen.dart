@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_state.dart';
+import '../../utils/auth_gate.dart';
 import '../../bloc/task/task_bloc.dart';
 import '../../bloc/task/task_event.dart';
 import '../../bloc/task/task_state.dart';
@@ -73,14 +74,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     // Initial load from preferences
     _loadStateFromPrefs();
     
-    // Original Home logic for active tasks and reviews
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TaskBloc>().add(const TaskLoadActive());
-      context.read<TaskBloc>().add(const TaskLoadPendingReviews());
-    });
-    
-    // Subscribe to real-time task creation events
-    _setupRealtimeSubscription();
+    // Only load account-based data and subscribe to realtime if authenticated
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<TaskBloc>().add(const TaskLoadActive());
+        context.read<TaskBloc>().add(const TaskLoadPendingReviews());
+      });
+      _setupRealtimeSubscription();
+    }
   }
 
   void _onScroll() {
@@ -481,7 +483,10 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         body: _buildHomeContent(context),
         floatingActionButton: FloatingActionButton(
           heroTag: 'home_post_task_fab',
-          onPressed: () => _showCreateOptions(context),
+          onPressed: () async {
+            if (!await requireAuth(context, 'post a task')) return;
+            _showCreateOptions(context);
+          },
           backgroundColor: AppTheme.primary,
           elevation: 6,
           child: const Icon(Icons.add, color: Colors.white, size: 28),
