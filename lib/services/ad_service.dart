@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/env.dart';
@@ -45,6 +46,16 @@ class AdService {
   Future<void> get isInitialized => _initCompleter.future;
 
   Future<void> initialize() async {
+    // Request tracking authorization for iOS 14+
+    if (Platform.isIOS) {
+      try {
+        final status = await AppTrackingTransparency.requestTrackingAuthorization();
+        debugPrint('ATT Status: $status');
+      } catch (e) {
+        debugPrint('ATT Error: $e');
+      }
+    }
+
     await MobileAds.instance.initialize();
     await checkAdMobStatus();
     if (!_initCompleter.isCompleted) _initCompleter.complete();

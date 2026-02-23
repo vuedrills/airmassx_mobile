@@ -55,6 +55,8 @@
 		<string>We need access to your camera to take a selfie for identity verification and to capture photos of your work/equipment.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>We need access to your photo library to allow you to upload ID documents and portfolio photos.</string>
+		<key>NSUserTrackingUsageDescription</key>
+		<string>This identifier will be used to deliver personalized ads to you.</string>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
 		<key>CFBundleURLTypes</key>
