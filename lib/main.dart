@@ -43,7 +43,7 @@ import 'models/task.dart' as models;
 
 
 // Global flag for first launch detection
-bool _isFirstLaunch = false;
+bool _isFirstLaunch = true;
 
 void main() async {
   // Initialize App Config
@@ -411,9 +411,23 @@ class _MainScaffoldState extends State<MainScaffold> {
         ),
         BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
+            if (state is AuthLoggingOut) {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const PopScope(
+                  canPop: false,
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                ),
+              );
+            }
             if (state is AuthUnauthenticated) {
-              // If we are showing a modal, it will be dismissed by the router redirect
-              // but we can also handle it here if needed.
+              // Close any dialogs (like the loading one or the confirmation one if still open)
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
               _reviewModalShown = false;
             }
           },

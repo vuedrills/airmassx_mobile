@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
@@ -17,39 +18,56 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  Timer? _autoPlayTimer;
 
   late AnimationController _buttonAnimController;
   late Animation<double> _buttonScale;
 
   final List<OnboardingPageData> _pages = [
     OnboardingPageData(
-      title: 'Get It Done',
-      description: 'Post any task. Find trusted professionals in your area. Get things done effortlessly.',
-      icon: Icons.check_circle_outline_rounded,
+      title: 'Get Competitive Bids',
+      description: 'Post your task and receive competitive bids from verified experts nearby.',
+      imagePath: 'assets/images/onboarding_client.jpg',
       gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFF5A5F), Color(0xFFFF7E82), Color(0xFFE04850)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFE04850), Color(0xFFFF5A5F)], // Red Gradient
+      ),
+      descriptionSpan: const TextSpan(
+        children: [
+          TextSpan(text: 'Post your task and receive competitive '),
+          TextSpan(
+            text: 'bids',
+            style: TextStyle(
+              color: Color(0xFFFF4848), // Bright Red
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          TextSpan(text: ' from verified experts nearby.'),
+        ],
       ),
     ),
     OnboardingPageData(
-      title: 'Earn Money',
-      description: 'Browse tasks near you. Make competitive offers. Build your reputation and grow your income.',
-      icon: Icons.payments_outlined,
+      title: 'Find Clients',
+      description: 'Receive SMS notifications when clients nearby request your services.',
+      imagePath: 'assets/images/onboarding_professional.jpg',
       gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFE04850), Color(0xFFFF5A5F), Color(0xFF1A2B4A)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF1E3C72), Color(0xFF2A5298)], // Royal Blue Gradient
       ),
-    ),
-    OnboardingPageData(
-      title: 'Safe & Secure',
-      description: 'Protected payments. Verified professionals. Your satisfaction is guaranteed.',
-      icon: Icons.shield_outlined,
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF1A2B4A), Color(0xFF2E4A6F), Color(0xFFE04850)],
+      descriptionSpan: const TextSpan(
+        children: [
+          TextSpan(text: 'Receive '),
+          TextSpan(
+            text: 'SMS',
+            style: TextStyle(
+              color: Color(0xFFFF4848), // Bright Red
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          TextSpan(text: ' notifications when clients nearby request your services.'),
+        ],
       ),
     ),
   ];
@@ -67,10 +85,44 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         curve: Curves.easeInOut,
       ),
     );
+
+    // Start auto-play
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_currentPage < _pages.length - 1) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        // Stop timer on last page
+        _stopAutoPlay();
+        // Option: Auto-navigate to login? User said: "automatically slide... and then show the signup page"
+        // Let's hold on last page for a moment then navigate, or just stop. 
+        // Given UX patterns, usually auto-play stops at end. 
+        // But user request was specific: "automatically slide... and then show the signup page".
+        // Let's navigate after a short delay on the last page.
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted && _currentPage == _pages.length - 1) {
+            context.go('/signup');
+          }
+        });
+      }
+    });
+  }
+
+  void _stopAutoPlay() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = null;
   }
 
   @override
   void dispose() {
+    _stopAutoPlay();
     _pageController.dispose();
     _buttonAnimController.dispose();
     super.dispose();
@@ -80,89 +132,100 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     setState(() {
       _currentPage = page;
     });
+    // If user manually swipes, we might want to reset the timer or stop it?
+    // User didn't specify, but good UX is to pause/reset on interaction.
+    // However, to strictly follow "slide after 2 seconds", we'll keep it running 
+    // unless they are on last page.
   }
 
   void _onNext() {
+    _stopAutoPlay(); // Stop auto-play if user interacts
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
     } else {
-      context.go('/login');
+      context.go('/signup');
     }
   }
 
   void _onSkip() {
-    context.go('/login');
+    _stopAutoPlay();
+    context.go('/signup');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // PageView
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: _onPageChanged,
-            itemCount: _pages.length,
-            itemBuilder: (context, index) {
-              return OnboardingPage(
-                data: _pages[index],
-                index: index,
-              );
-            },
-          ),
+      body: GestureDetector(
+        // Stop auto-play on any tap down to allow user to read
+        onTapDown: (_) => _stopAutoPlay(),
+        child: Stack(
+          children: [
+            // PageView
+            PageView.builder(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
+              itemCount: _pages.length,
+              itemBuilder: (context, index) {
+                return OnboardingPage(
+                  data: _pages[index],
+                  index: index,
+                  viewportFraction: 1.0,
+                );
+              },
+            ),
 
-          // Skip button
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            right: 16,
-            child: TextButton(
-              onPressed: _onSkip,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+            // Skip button
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              right: 16,
+              child: TextButton(
+                onPressed: _onSkip,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.black54, // Darker text for white bg
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Skip',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.3,
+                child: const Text(
+                  'Skip',
+                  style: TextStyle(
+                    fontSize: 16, // Slightly larger
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // Bottom section with indicators and button
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Page indicators
-                    _buildPageIndicators(),
+            // Bottom section with indicators and button
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Page indicators
+                      _buildPageIndicators(),
 
-                    AppSpacing.vXl,
+                      AppSpacing.vXl,
 
-                    // Next/Get Started button
-                    _buildNextButton(),
-                  ],
+                      // Next/Get Started button
+                      _buildNextButton(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -180,18 +243,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           height: 8,
           decoration: BoxDecoration(
             color: index == _currentPage
-                ? Colors.white
-                : Colors.white.withOpacity(0.4),
+                ? AppTheme.primary
+                : Colors.grey.withOpacity(0.3),
             borderRadius: BorderRadius.circular(4),
-            boxShadow: index == _currentPage
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
           ),
         ),
       ),
@@ -205,7 +259,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       onTapDown: (_) => _buttonAnimController.forward(),
       onTapUp: (_) {
         _buttonAnimController.reverse();
-        _onNext();
+        _onNext(); // This handles navigation
       },
       onTapCancel: () => _buttonAnimController.reverse(),
       child: AnimatedBuilder(
@@ -218,13 +272,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         },
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 18),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: AppTheme.primary,
+            borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: AppTheme.primary.withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -234,22 +288,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                isLastPage ? 'Get Started' : 'Continue',
-                style: TextStyle(
-                  fontSize: 18,
+                isLastPage ? 'Get Started' : 'Next',
+                style: const TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: _pages[_currentPage].gradient?.colors.first ??
-                      AppTheme.primary,
-                  letterSpacing: 0.3,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
                 ),
               ),
-              if (isLastPage) ...[
-                AppSpacing.hSm,
-                Icon(
+              if (!isLastPage) ...[
+                const SizedBox(width: 8),
+                const Icon(
                   Icons.arrow_forward_rounded,
-                  color: _pages[_currentPage].gradient?.colors.first ??
-                      AppTheme.primary,
-                  size: 22,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ],
             ],
@@ -268,6 +320,7 @@ class OnboardingPageData {
   final String? imagePath;
   final LinearGradient? gradient;
   final Color? backgroundColor;
+  final InlineSpan? descriptionSpan; // For rich text (e.g. bold/red SMS)
 
   OnboardingPageData({
     required this.title,
@@ -276,5 +329,6 @@ class OnboardingPageData {
     this.imagePath,
     this.gradient,
     this.backgroundColor,
+    this.descriptionSpan,
   });
 }

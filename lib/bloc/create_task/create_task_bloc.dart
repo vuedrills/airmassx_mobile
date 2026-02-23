@@ -124,7 +124,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
   ) {
     if (state.isEquipmentTask) {
       // Equipment tasks generally only have one machine type
-      final isOtherEquipment = event.category.toLowerCase().contains('other equipment');
+      final isOtherEquipment = event.category.toLowerCase().contains('other');
       
       emit(state.copyWith(
         categories: [event.category],

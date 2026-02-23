@@ -97,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           child: BlocBuilder<AuthBloc, AuthState>(
             builder: (context, authState) {
               if (authState is! AuthAuthenticated) {
-                return _buildUnauthenticatedView(context);
+                return const Center(child: CircularProgressIndicator());
               }
 
               return BlocListener<ProfileBloc, ProfileState>(
@@ -158,92 +158,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildUnauthenticatedView(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FadeTransition(
-            opacity: _fadeAnimations[0],
-            child: SlideTransition(
-              position: _slideAnimations[0],
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppTheme.neutral100,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.account_circle_outlined,
-                  size: 64,
-                  color: AppTheme.navy,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          FadeTransition(
-            opacity: _fadeAnimations[1],
-            child: SlideTransition(
-              position: _slideAnimations[1],
-              child: Text(
-                'Log in or Sign up',
-                style: GoogleFonts.oswald(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.navy,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          FadeTransition(
-            opacity: _fadeAnimations[2],
-            child: SlideTransition(
-              position: _slideAnimations[2],
-              child: Text(
-                'Join the community to get tasks done or earn money.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunitoSans(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          FadeTransition(
-            opacity: _fadeAnimations[3],
-            child: SlideTransition(
-              position: _slideAnimations[3],
-              child: _buildPrimaryActionCard(
-                context,
-                title: 'Log in',
-                icon: Icons.login_rounded,
-                onTap: () => context.go('/login'),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          FadeTransition(
-            opacity: _fadeAnimations[4],
-            child: SlideTransition(
-              position: _slideAnimations[4],
-              child: _buildCompactOption(
-                context,
-                title: 'Create an Account',
-                subtitle: 'Join Airmass Xpress today',
-                icon: Icons.person_add_outlined,
-                accentColor: AppTheme.primary,
-                onTap: () => context.go('/signup'),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildAuthenticatedView(BuildContext context, ProfileLoaded state) {
     final profile = state.profile;
@@ -998,67 +913,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildPrimaryActionCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppTheme.navy, AppTheme.navyLight],
-          ),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.navy.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 14),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_forward, color: Colors.white, size: 16),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildLogoutCard(BuildContext context) {
     return InkWell(

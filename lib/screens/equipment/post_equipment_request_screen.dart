@@ -383,7 +383,7 @@ class _StepMachineSpecsState extends State<_StepMachineSpecs> {
                     
                     // Custom Equipment Name (shown when 'Other Equipment' is selected)
                     if (state.categories.isNotEmpty && 
-                        state.categories.first.toLowerCase().contains('other equipment')) ...[
+                        state.categories.first.toLowerCase().contains('other')) ...[
                       const SizedBox(height: 12),
                       Container(
                         decoration: BoxDecoration(

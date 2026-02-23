@@ -30,6 +30,14 @@ class NotificationService {
       }
     }
 
+    // Prevent FCM from auto-showing notifications in foreground
+    // (we handle foreground display ourselves via flutter_local_notifications)
+    await _fcm.setForegroundNotificationPresentationOptions(
+      alert: false,
+      badge: false,
+      sound: false,
+    );
+
     // 3. Setup Local Notifications for Foreground
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@drawable/ic_notification');

@@ -7,6 +7,7 @@ import '../../core/service_locator.dart';
 import '../profile/profile_bloc.dart';
 import '../profile/profile_event.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 import '../../config/env.dart';
@@ -22,6 +23,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegister>(_onRegister);
     on<AuthLogout>(_onLogout);
     on<AuthGoogleLogin>(_onGoogleLogin);
+    on<AuthAppleLogin>(_onAppleLogin);
     on<AuthForgotPasswordRequested>(_onForgotPassword);
     on<AuthResetPasswordSubmitted>(_onResetPassword);
 
@@ -31,6 +33,61 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         add(AuthLogout());
       }
     });
+  }
+
+  Future<void> _onAppleLogin(
+    AuthAppleLogin event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final isAvailable = await SignInWithApple.isAvailable();
+      if (!isAvailable) {
+        emit(AuthError('Sign in with Apple is not available on this device'));
+        return;
+      }
+
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      print('AuthBloc: Apple Sign-In Successful for ${credential.email}');
+      print('AuthBloc: Identity Token Length: ${credential.identityToken?.length}');
+
+      if (credential.identityToken == null) {
+        emit(AuthError('Failed to get Identity Token from Apple'));
+        return;
+      }
+
+      final user = await _apiService.appleLogin(
+        idToken: credential.identityToken!,
+        firstName: credential.givenName,
+        lastName: credential.familyName,
+      );
+
+      if (user != null) {
+        _connectRealtime().catchError((e) => print('AuthBloc: Realtime failed: $e'));
+        getIt<NotificationService>().updateToken().catchError((e) => print('AuthBloc: FCM failed: $e'));
+        getIt<ProfileBloc>().add(LoadProfile());
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(AuthUnauthenticated());
+      }
+    } catch (e) {
+      print('AuthBloc: Apple login exception: $e');
+      final message = ErrorHandler.getUserFriendlyMessage(e);
+      
+      // Handle cancellation gracefully
+      if (e is SignInWithAppleAuthorizationException && 
+          e.code == AuthorizationErrorCode.canceled) {
+         emit(AuthUnauthenticated());
+      } else {
+         emit(AuthError(message));
+      }
+    }
   }
 
   Future<void> _onLoadUser(
@@ -67,6 +124,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogout event,
     Emitter<AuthState> emit,
   ) async {
+    emit(AuthLoggingOut());
     try {
       await _apiService.logout();
       await _realtimeService.disconnect();

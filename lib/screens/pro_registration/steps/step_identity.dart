@@ -305,12 +305,36 @@ class _StepIdentityState extends State<StepIdentity> with TickerProviderStateMix
     return savedFile;
   }
 
+  bool _isPickingImage = false;
+
   Future<void> _pickAndUploadImage(BuildContext context, {required String type}) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (image == null) return;
+    if (_isPickingImage || _isUploading) return;
 
     setState(() {
+      _isPickingImage = true;
+    });
+
+    XFile? image;
+    try {
+      final picker = ImagePicker();
+      image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+
+    if (!mounted) return;
+
+    // If cancelled or failed, reset picking flag
+    if (image == null) {
+      setState(() {
+        _isPickingImage = false;
+      });
+      return;
+    }
+
+    // Transition directly to uploading state
+    setState(() {
+      _isPickingImage = false;
       _isUploading = true;
       _uploadingType = type;
     });
@@ -318,7 +342,14 @@ class _StepIdentityState extends State<StepIdentity> with TickerProviderStateMix
     try {
       // Copy to permanent storage to avoid PathNotFoundException
       final pickedFile = File(image.path);
-      final file = await _saveFilePermanently(pickedFile);
+      File file;
+      try {
+        file = await _saveFilePermanently(pickedFile);
+      } catch (e) {
+         // If saving permanently fails, try to use the picked file directly or handle error
+         debugPrint('Error saving file permanently: $e');
+         file = pickedFile;
+      }
       
       // Upload to server
       final url = await getIt<ApiService>().uploadTaskerFile(file, 'id_document');
@@ -346,7 +377,9 @@ class _StepIdentityState extends State<StepIdentity> with TickerProviderStateMix
       
       // Clean up local copy after successful upload
       try {
-        await file.delete();
+        if (file.path != pickedFile.path) {
+            await file.delete();
+        }
       } catch (e) {
         debugPrint('Failed to delete temporary file: $e');
       }

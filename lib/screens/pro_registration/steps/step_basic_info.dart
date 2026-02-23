@@ -154,7 +154,12 @@ class _StepBasicInfoState extends State<StepBasicInfo> with TickerProviderStateM
                   position: _slideAnimations[2],
                   child: _buildInputCard(
                     label: 'Phone Number (Optional)',
-                    subtitle: 'Used for client communication only',
+                    subtitle: 'To receive SMS notifications from clients near you',
+                    subtitleStyle: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
                     child: Row(
                       children: [
                         // Country Code Dropdown
@@ -252,6 +257,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> with TickerProviderStateM
   Widget _buildInputCard({
     required String label,
     String? subtitle,
+    TextStyle? subtitleStyle,
     required Widget child,
   }) {
     return Container(
@@ -283,7 +289,7 @@ class _StepBasicInfoState extends State<StepBasicInfo> with TickerProviderStateM
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              style: subtitleStyle ?? TextStyle(fontSize: 11, color: Colors.grey[500]),
             ),
           ],
           const SizedBox(height: 4),

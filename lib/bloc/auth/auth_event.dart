@@ -21,6 +21,7 @@ class AuthRegister extends AuthEvent {
 class AuthLogout extends AuthEvent {}
 
 class AuthGoogleLogin extends AuthEvent {}
+class AuthAppleLogin extends AuthEvent {}
 
 class AuthForgotPasswordRequested extends AuthEvent {
   final String email;

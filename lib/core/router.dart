@@ -53,7 +53,7 @@ class AppRouter {
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
     redirect: (BuildContext context, GoRouterState state) {
       final authState = authBloc.state;
-      final isAuthenticated = authState is AuthAuthenticated;
+      final isAuthenticated = authState is AuthAuthenticated || authState is AuthLoggingOut;
       final isOnboarding = state.matchedLocation.startsWith('/onboarding') ||
           state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/signup') ||
@@ -66,9 +66,15 @@ class AppRouter {
         return '/home';
       }
 
+      // Guest-accessible routes (no login required)
+      final isGuestAccessible = state.matchedLocation == '/home' ||
+          state.matchedLocation.startsWith('/browse-jobs') ||
+          state.matchedLocation.startsWith('/tasks/') ||
+          state.matchedLocation.startsWith('/projects/');
+
       // If user is not authenticated and trying to access protected screens
-      if (!isAuthenticated && !isOnboarding) {
-        return isFirstLaunch ? '/signup' : '/login';
+      if (!isAuthenticated && !isOnboarding && !isGuestAccessible) {
+        return isFirstLaunch ? '/onboarding' : '/login';
       }
 
       // No redirect needed

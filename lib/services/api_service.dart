@@ -369,6 +369,24 @@ class ApiService {
     return _currentUser;
   }
 
+  Future<User?> appleLogin({
+    required String idToken,
+    String? firstName,
+    String? lastName,
+  }) async {
+    final body = {
+      'id_token': idToken,
+      if (firstName != null) 'first_name': firstName,
+      if (lastName != null) 'last_name': lastName,
+    };
+    
+    final data = await _post('/auth/apple', body);
+
+    await saveTokens(data['access_token'], data['refresh_token']);
+    _currentUser = _mapUser(data['user']);
+    return _currentUser;
+  }
+
   Future<User?> getCurrentUser({bool forceRefresh = false}) async {
     print('ApiService: getCurrentUser called (forceRefresh=$forceRefresh)');
     if (_currentUser != null && !forceRefresh) {

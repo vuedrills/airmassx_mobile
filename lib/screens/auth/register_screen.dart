@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -324,6 +325,29 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             ),
 
             const SizedBox(height: 32),
+
+            if (Platform.isIOS) ...[
+              _buildAnimatedWidget(
+                index: 1,
+                child: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, state) {
+                    return _buildSocialButton(
+                      context,
+                      label: 'Continue with Apple',
+                      icon: Icons.apple,
+                      color: Colors.black,
+                      textColor: Colors.white,
+                      backgroundColor: Colors.black,
+                      isLoading: state is AuthLoading,
+                      onTap: () {
+                        context.read<AuthBloc>().add(AuthAppleLogin());
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             if (_isGoogleSignInEnabled) ...[
               // Social Auth
@@ -739,6 +763,8 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     required String label,
     required IconData icon,
     required Color color,
+    Color backgroundColor = Colors.white,
+    Color? textColor,
     required VoidCallback onTap,
     bool isLoading = false,
   }) {
@@ -749,8 +775,8 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey[200]!),
+          color: backgroundColor,
+          border: backgroundColor == Colors.white ? Border.all(color: Colors.grey[200]!) : null,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -761,24 +787,31 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           ],
         ),
         child: isLoading 
-          ? const Center(
+          ? Center(
               child: SizedBox(
                 height: 24,
                 width: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: textColor ?? AppTheme.primary,
+                ),
               ),
             )
           : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                BrandIcons.google(),
+                if (label.contains('Google'))
+                  BrandIcons.google()
+                else
+                  Icon(icon, color: textColor ?? color, size: 24),
+                  
                 const SizedBox(width: 12),
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
+                    color: textColor ?? color,
                   ),
                 ),
               ],
