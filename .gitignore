@@ -4,6 +4,10 @@
 *.pyc
 *.swp
 .DS_Store
+
+# Debug artifacts (screenshots, analysis)
+/*.png
+analyze_*.txt
 .atom/
 .build/
 .buildlog/
